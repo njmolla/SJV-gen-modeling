@@ -2,11 +2,10 @@ import numpy as np
 from scipy import optimize
 from objective_gradient import objective_grad
 from objective_gradient import steady_state_gradient
-# import matplotlib.pyplot as plt
 
-def correct_scale_params(sigmas, lambdas, alloc_params, i, N, K, betas, beta_hats, beta_tildes, beta_bars, du_dx, etas, eta_bars):
+def correct_scale_params(sigmas, lambdas, sigma_hats, lambda_hats, alloc_params, i, N, K, betas, beta_hats, beta_tildes, beta_bars, du_dx_plus, du_dx_minus, etas, eta_hats, eta_bars):
   '''
-  Corrects scale parameters (either sigmas or lambdas) to be consisent with optimization
+  Corrects scale parameters (sigmas, sigma_hats, or lambdas) to be consisent with optimization
   results. Takes in scale parameters (2d) and strategy parameters for a particular actor i (1d),
   and sets scale parameters to 0 if the corresponding strategy parameters are 0, ensuring
   that the scale parameters still add to 1.
@@ -23,30 +22,47 @@ def correct_scale_params(sigmas, lambdas, alloc_params, i, N, K, betas, beta_hat
           ),
           np.shape(sigmas[:, ~all_zeros_sigmas & new_zeros_sigmas])
       )
+  sigmas = np.nan_to_num(sigmas)
+      
+  # new_zeros_sigma_hats = (alloc_params[N+K:] <= 0)
+  # sigma_hats[i, new_zeros_sigma_hats] = 0
+  # all_zeros_sigma_hats = (np.sum(sigmas, axis=0) == 0)
+
+  # # for all columns that now have new zeros (but are not all zeros), renormalize to make sure the rows still sum to 1
+  # sigma_hats[:, ~all_zeros_sigma_hats & new_zeros_sigma_hats] /= np.broadcast_to(
+          # np.expand_dims(
+              # np.sum(sigma_hats[:, ~all_zeros_sigma_hats & new_zeros_sigma_hats], axis = 0),
+              # axis=0
+          # ),
+          # np.shape(sigma_hats[:, ~all_zeros_sigma_hats & new_zeros_sigma_hats])
+      # )    
    
   # Create views of the part for resource users
-  user_beta_tildes = beta_tildes[0, :N-K]
-  user_beta_hats = beta_hats[0, :N-K]
-  user_betas = betas[0, :N-K]
-  user_zeros = all_zeros_sigmas[:N-K]
+  user_beta_tildes = beta_tildes[0, :N]
+  user_beta_hats = beta_hats[0, :N]
+  user_betas = betas[0, :N]
+  user_zeros = all_zeros_sigmas[:N]
 
-  user_beta_tildes[user_zeros] = 0
-  user_beta_sums = user_beta_hats[user_zeros] + user_betas[user_zeros]
+  user_betas[user_zeros] = 0
+  user_beta_sums = user_beta_hats[user_zeros] + user_betas[user_zeros] + user_beta_tildes[user_zeros]
   user_beta_hats[user_zeros] /= user_beta_sums
-  user_betas[user_zeros] /= user_beta_sums
+  user_beta_hats = np.nan_to_num(user_beta_hats)
+  user_beta_tildes[user_zeros] /= user_beta_sums
+  user_beta_tildes = np.nan_to_num(user_beta_tildes)
 
   # Create views of the part for non-resource users
-  nonuser_beta_tildes = beta_tildes[0, N-K:]
-  nonuser_beta_bars = beta_bars[0, N-K:]
-  nonuser_zeros = all_zeros_sigmas[N-K:]
-  nonuser_du_dx = du_dx[N-K:]
+  nonuser_beta_tildes = beta_tildes[0, N:]
+  nonuser_betas = betas[0, N:]
+  nonuser_beta_bars = beta_bars[0, N:]
+  nonuser_zeros = all_zeros_sigmas[N:]
+  nonuser_du_dx = du_dx_plus[N:]
 
   nonuser_beta_tildes[nonuser_zeros] = 0
   nonuser_du_dx[nonuser_zeros] *= nonuser_beta_bars[nonuser_zeros]
   nonuser_beta_bars[nonuser_zeros] = 1
      
   new_zeros_lambdas = (alloc_params >= 0)
-  lambdas[i, new_zeros_sigmas] = 0
+  lambdas[i, new_zeros_lambdas] = 0
   all_zeros_lambdas = (np.sum(lambdas, axis=0) == 0)
   # for all columns that now have new zeros (but are not all zeros), renormalize to make sure the rows still sum to 1
 
@@ -57,9 +73,23 @@ def correct_scale_params(sigmas, lambdas, alloc_params, i, N, K, betas, beta_hat
           ),
           np.shape(lambdas[:, ~all_zeros_lambdas & new_zeros_lambdas])
       )
+      
+      
+  # new_zeros_lambda_hats = (alloc_params[N+K:] >= 0)
+  # lambda_hats[i, new_zeros_lambda_hats] = 0
+  # all_zeros_lambda_hats = (np.sum(lambda_hats, axis=0) == 0)
+  # # for all columns that now have new zeros (but are not all zeros), renormalize to make sure the rows still sum to 1
+
+  # lambda_hats[:, ~all_zeros_lambda_hats & new_zeros_lambda_hats] /= np.broadcast_to(
+          # np.expand_dims(
+              # np.sum(lambda_hats[:, ~all_zeros_lambda_hats & new_zeros_lambda_hats], axis = 0),
+              # axis=0
+          # ),
+          # np.shape(lambda_hats[:, ~all_zeros_lambda_hats & new_zeros_lambda_hats])
+      # )
 
   etas[0, all_zeros_lambdas] = 0
-  eta_bars[all_zeros_lambdas] = 1
+  eta_bars = 1 - eta_hats[0] - etas[0]
 
   
 
@@ -68,16 +98,12 @@ def boundary_projection(mu, strategy, plane):
   return np.sum(np.maximum(strategy*plane - mu, 0)) - 1
 
 
-def grad_descent_constrained(initial_point, alpha, v, n, l, J, N,K,M,T,
-    phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-    ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-    F,H,W,K_p,drdot_dF,dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, dxdot_dW_n, dydot_dW_n,drdot_dK_p,
-    dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n):
+def grad_descent_constrained(initial_point, alpha, objective, i, N, K, M, R, tot,
+        phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus):
     
   '''
   inputs:
     initial_point is the initial strategy
-    max_steps (usually low, don't go all the way to optimal)
     n is the actor whose objective we want to optimize
     l is the actor whose strategy it is
     J is the Jacobian
@@ -90,24 +116,19 @@ def grad_descent_constrained(initial_point, alpha, v, n, l, J, N,K,M,T,
 
   x = initial_point  # strategy
   # calculate how steady state changes with respect to strategy parameters
-  dR_dF, dX_dF, dY_dF, dR_dH, dX_dH, dY_dH, dR_dW_p, dX_dW_p, dY_dW_p, dR_dW_n, dX_dW_n, dY_dW_n, dR_dK_p, dX_dK_p, dY_dK_p, dR_dK_n, dX_dK_n, dY_dK_n\
-  = steady_state_gradient(x, n, l, J, N,K,M,T,          
-    phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-    ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-    F,H,W,K_p, drdot_dF, dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, 
-    dxdot_dW_n, dydot_dW_n,drdot_dK_p, dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n)
+  dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus\
+  = steady_state_gradient(x, objective, i, N, K, M, R, tot,
+          phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
           
           
   # calculate how objective changes wrt strategy parameters (the gradient)
-  grad = objective_grad(x, n, l, J, N,K,M,T,
-    phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-    ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-    F,H,W,K_p,dR_dF, dX_dF, dY_dF, dR_dH, dX_dH, dY_dH, dR_dW_p, dX_dW_p, dY_dW_p, dR_dW_n, dX_dW_n, dY_dW_n, dR_dK_p, dX_dK_p, dY_dK_p, dR_dK_n, dX_dK_n, dY_dK_n)
+  grad = objective_grad(x, objective, i, N, K, M, R, tot,
+          psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus)
 
   d = len(x)
-  v[n] = 0.9*v[n] + alpha*grad
+  #v[n] = 0.9*v[n] + alpha*grad
   # Follow the projected gradient for a fixed step size alpha
-  x = x + v[n]
+  x = x + alpha*grad
   #print(x)
   plane = np.sign(x)
   plane[abs(plane)<0.00001] = 1
@@ -128,61 +149,123 @@ def grad_descent_constrained(initial_point, alpha, v, n, l, J, N,K,M,T,
         raise Exception('bisection bounds did not work')
       x = plane * np.maximum(x*plane - mu, 0)
 
-  return x, v # normally return only x
+  return x# normally return only x
 
-def ODE_gradient(N,K,M,T,
-    phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-    ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n):
+def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus):
   # Compute how the rhs of system changes with respect to each strategy parameter
-  drdot_dF = -phi*np.multiply(psis.reshape(1,1,N),np.multiply(de_dg,dg_dF))
-  dxdot_dF = np.zeros([N,N,M,N])
+  
+  # For strategy G ####################
+  drdot_dG = np.zeros((R,N+K,R,M,N))
+  drdot_dG[0,:,0] = -phis[0]*psis[0]*np.multiply(psi_tildes[0].reshape(1,1,N),np.multiply(de_dg[0],dg_dG[0]))
+  drdot_dG[1,:,1] = -phis[1]*np.multiply(psi_tildes[1].reshape(1,1,N),np.multiply(de_dg[1],dg_dG[1]))
+  drdot_dG[1,:,0] = -phis[1]*np.multiply(psi_tildes[1].reshape(1,1,N),np.multiply(de_dg[1],dg_dG[1]))
+  drdot_dG[2,:,2] = phis[1]*np.multiply(psi_tildes[2].reshape(1,1,N),np.multiply(de_dg[2],dg_dG[2])) 
+  
+  dxdot_dG = np.zeros([N,N+K,R,M,N])
 #  for i in range(N):
-#    dxdot_dF[i,:,:,i] = alphas[0,i]*betas[0,i]*db_de[0,i]*de_dg[0,:,i]*dg_dF[:,:,i]
-  dxdot_dF[np.arange(0,N),:,:,np.arange(0,N)] = np.transpose(np.multiply(
+#    dxdot_dF[i,:,:,i] = alphas[0,i]*betas[0,i]*db_de[0,i]*de_dg[0,:,i]*dg_dG[:,:,i]
+  dxdot_dG[np.arange(0,N),:,0,:,np.arange(0,N)] = np.transpose(np.multiply(
              #n k m (gets rid of last index)
-        np.reshape(alphas*betas*db_de, (1,1,N)),
+        np.reshape(alphas[0,:N]*beta_tildes[0,:N]*(sigma_tildes[0,:N]*db_de[0,:N] + sigma_tildes[1,:N]*db_de[1,:N]*de2_de1), 
+        (1,1,N)),
                     # 1n    1n    1n
-        np.multiply(de_dg,dg_dF)
+        np.multiply(de_dg[0],dg_dG[0])
                   # 1mn    kmn
       ), (2,0,1))  # transpose kmn -> nkm
+    
+  dxdot_dG[np.arange(0,N),:,1,:,np.arange(0,N)] = np.transpose(np.multiply(
+           #n k m (gets rid of last index)
+      np.reshape(alphas[0,:N]*beta_tildes[0,:N]*sigma_tildes[1,:N]*db_de[1,:N], 
+      (1,1,N)),
+                  # 1n    1n    1n
+      np.multiply(de_dg[1],dg_dG[1])
+                # 1mn    kmn
+    ), (2,0,1))
+    
+  dxdot_dG[np.arange(0,N),:,2,:,np.arange(0,N)] = np.transpose(np.multiply(
+           #n k m (gets rid of last index)
+      np.reshape(alphas[0,:N]*beta_tildes[0,:N]*sigma_tildes[2,:N]*db_de[2,:N], 
+      (1,1,N)),
+                  # 1n    1n    1n
+      np.multiply(de_dg[2],dg_dG[2])
+                # 1mn    kmn
+    ), (2,0,1))    
+  
+  # For strategy E
+  
+  drdot_dE = np.zeros((R,N+K,R,N))
+  drdot_dE[0,:,0] = (-phis[0]*psis[0]*psi_tildes[0,])[np.newaxis]*de_dE[0,:,:]
+  drdot_dE[1,:,1] = (-phis[1]*psi_tildes[1])[np.newaxis]*de_dE[1,:,:]
+  drdot_dE[1,:,0] = (-phis[1]*psi_tildes[1])[np.newaxis]*de2_de1*de_dE[0,:,:]
+  drdot_dE[2,:,2] = (phis[1]*psi_tildes[2])[np.newaxis]*de_dE[2,:,:]
+  
+  dxdot_dE = np.zeros((N,N+K,R,N))
+  dxdot_dE[np.arange(0,N),:,0,np.arange(0,N)] = np.transpose(np.multiply(
+             #n k m (gets rid of last index)
+        np.reshape(alphas[0,:N+K]*beta_tildes[0,:N+K]*(sigma_tildes[0]*db_de[0] + sigma_tildes[1]*db_de[1]*de2_de1), 
+        (N+K,1)),
+        de_dE[0]
+      ))  
+  dxdot_dE[np.arange(0,N),:,1,np.arange(0,N)] = np.transpose(np.multiply(
+             #n k m (gets rid of last index)
+        np.reshape(alphas[0,:N+K]*beta_tildes[0,:N+K]*sigma_tildes[1]*db_de[1], 
+        (N+K,1)),
+        de_dE[1]
+      ))
 
-  dydot_dF = np.zeros([M,N,M,N])
+  dxdot_dE[np.arange(0,N),:,2,np.arange(0,N)] = np.transpose(np.multiply(
+             #n k m (gets rid of last index)
+        np.reshape(alphas[0,:N+K]*beta_tildes[0,:N+K]*sigma_tildes[2]*db_de[2], 
+        (N+K,1)),
+        de_dE[2]
+      ))      
+ 
+  # For strategy H (recharge policy)
+  drdot_dH = np.zeros((3,N+K,M))
+  drdot_dH[0] = -phis[0]*psi_bars[0]*np.multiply(np.transpose(dt_dh), dh_dH)
+  drdot_dH[1] = phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
+  drdot_dH[2] = -phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
+  
+  dxdot_dH = np.zeros((N,N+K,M))
+  
+  # For strategy T (directly influence recharge)
+  drdot_dT = np.zeros((3,N+K))
+  drdot_dT[0] = -phis[0]*psi_bars[0]*dt_dT
+  drdot_dT[1] = phis[1]*psi_bars[1]*dt_dT
+  drdot_dT[2] = -phis[1]*psi_bars[1]*dt_dT
+  
+  dxdot_dT = np.zeros((N,N+K))
 
-  drdot_dH = np.zeros([N,M,N])
-  dxdot_dH = np.zeros([N,N,M,N])
-  dxdot_dH[np.arange(0,N),:,:,np.arange(0,N)] = np.transpose(np.multiply(np.reshape(alphas*beta_hats*dq_da,(1,1,N)),
-                                                             np.multiply(da_dp,dp_dH)), (2,0,1))
-  dydot_dH = np.zeros([M,N,M,N])
+  # For strategy C
+  drdot_dC_plus = np.zeros((3,N+K,tot))
+  drdot_dC_minus = np.zeros((3,N+K,tot))
+  # dxdot_n/dC_k,i is nxkxi
+  dxdot_dC_plus = np.zeros((tot,N+K,tot))
+  dxdot_dC_plus[np.arange(0,tot),:,np.arange(0,tot)] =  np.transpose(np.multiply(alphas*betas,np.multiply(sigmas,dc_dC)))
+  
+  dxdot_dC_minus = np.zeros((tot,N+K,tot))
+  dxdot_dC_minus[np.arange(0,tot),:,np.arange(0,tot)] =  np.transpose(np.multiply(alphas*etas,np.multiply(lambdas,dc_dC)))
 
-  drdot_dW_p = np.zeros([N,N])
-  dxdot_dW_p = np.zeros([N,N,N]) # dxdot_n/dW_k,i is nxkxi
-  dxdot_dW_p[np.arange(0,N),:,np.arange(0,N)] = np.transpose(np.multiply(alphas*beta_tildes,np.multiply(sigmas,dc_dw_p)))
-  dydot_dW_p = np.zeros([M,N,N])
+  # For strategy P
+  drdot_dP_plus = np.zeros((3,N+K,M,tot))
+  drdot_dP_minus = np.zeros((3,N+K,M,tot))
+  dxdot_dP_plus = np.zeros((tot,N+K,M,tot))
+  dxdot_dP_plus[np.arange(0,tot),:,:,np.arange(0,tot)] = np.transpose(np.multiply(alphas*beta_hats,np.multiply(sigma_hats,dp_dP)),(2,0,1))
+  
+  dxdot_dP_minus = np.zeros((tot,N+K,M,tot))
+  dxdot_dP_minus[np.arange(0,tot),:,:,np.arange(0,tot)] = np.transpose(np.multiply(alphas*eta_hats,np.multiply(lambda_hats,dp_dP)),(2,0,1))
 
-  drdot_dW_n = np.zeros([N,N])
-  dxdot_dW_n = np.zeros([N,N,N])
-  dxdot_dW_n[np.arange(0,N),:,np.arange(0,N)] = np.transpose(np.multiply(-alphas*etas,np.multiply(lambdas,dc_dw_n)))
-  dydot_dW_n = np.zeros([M,N,N])
 
-  drdot_dK_p = np.zeros([N,M])
-  dxdot_dK_p = np.zeros([N,N,M])
-  dydot_dK_p = np.zeros([M,N,M])
-  # result is mxn
-  dydot_dK_p[np.arange(0,M),:,np.arange(0,M)] = np.transpose(np.multiply(mus,di_dK_p))
+  return (drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
+  
 
-  drdot_dK_n = np.zeros([N,M])
-  dxdot_dK_n = np.zeros([N,N,M])
-  dydot_dK_n = np.zeros([M,N,M])
-  dydot_dK_n[np.arange(0,M),:,np.arange(0,M)] = np.transpose(np.multiply(-mus,di_dK_n))
-  return (drdot_dF, dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, dxdot_dW_n, dydot_dW_n,drdot_dK_p,
-          dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n)
-
-def nash_equilibrium(max_iters,J,N,K,M,T,
-    phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n):
+def optimize_strategy(max_iters, i, N, K, M, tot, R, 
+    phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus):
   '''
   inputs:
-    max_iters
-    J is the Jacobian
+    max_iters - maximum number of iterations
+    i - the actor for whom we are optimizing
+    J - Jacobian
     N,K,M,T meta parameters
     scale parameters
     exponent parameters
@@ -191,90 +274,42 @@ def nash_equilibrium(max_iters,J,N,K,M,T,
     optimized strategy parameters
     updated sigmas and lamdas
   '''
-  F = np.zeros((N,M,N))  # F_i,m,n is ixmxn positive effort for influencing resource extraction governance $
-  H = np.zeros((N,M,N))  # effort for influencing resource access governance $
-  W = np.zeros((N,N))  # effort for collaboration. W_i,n is ixn $
-  K_p = np.zeros((N,M))  # effort for more influence for gov orgs $
   # step size
-  alpha = 0.0001
+  alpha = 0.001
 
   # Initialize strategy
-  strategy = np.zeros((N, 2*M*N + N + M))
-  v = np.zeros((N, 2*M*N + N + M)) # velocity for gradient descent with momentum
-  # sample to get bridging org objectives
-  objectives = np.random.randint(0,N-K,size = K)
+  strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
+  #v = np.zeros((N, len(strategy)) # velocity for gradient descent with momentum
   tolerance = alpha #
   max_diff = 1  # arbitrary initial value, List of differences in euclidean distance between strategies in consecutive iterations
   iterations = 0
-  strategy_diffs = []
-  strategy_history = []  # a list of the strategies at each iteration
-  strategy_sum = []
-  strategy_history.append(strategy.copy())
-  converged = True
-  grad = np.zeros(np.shape(strategy))
-  grad_history = []
-  sum_below_1 = True
-  has_zero_betas = False
-  #
-  (drdot_dF, dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, dxdot_dW_n, dydot_dW_n,drdot_dK_p,
-  dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n) = ODE_gradient(N,K,M,T,
-                                                                                     phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-                                                                                     ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n)
-  while (max_diff > tolerance or sum_below_1) and iterations < max_iters:
-    # Loop through each actor i
-    for i in range(N):
-      if i <= N-K-1:
-        objective = i
-      else:
-        objective = objectives[i-(N-K)]
+  objective = i # this isn't necessarily the case for non-resource users
 
-      new_strategy, v = grad_descent_constrained(strategy[i], alpha, v, objective, i, J, N,K,M,T,
-          phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-          ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-          F,H,W,K_p,drdot_dF, dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, dxdot_dW_n, dydot_dW_n,drdot_dK_p,
-          dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n)
+  (drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus) = ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
+  
+  
+  while (max_diff > tolerance) and iterations < max_iters:
+
+    new_strategy = grad_descent_constrained(strategy, alpha, objective, i, N, K, M, R, tot,
+        phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
 
 
-      # Check if there are new zeros or changes in the sign of the strategy parameters to see if we need to update scale parameters
-      # (e.g. for portion of gain through collaboration) to make sure they are consistent with our new
-      # strategy parameters.
+    # Check if there are new zeros or changes in the sign of the strategy parameters to see if we need to update scale parameters
+    # (e.g. for portion of gain through collaboration) to make sure they are consistent with our new
+    # strategy parameters.
+    
+    # if there are more zeros in the new strategy than the previous, or changes in the sign, and the scale parameters aren't already all zeros
+    if np.count_nonzero(new_strategy[R*M*N + R*N + 1 + M:R*M*N + R*N + 1 + M + tot]) < np.count_nonzero(strategy[R*M*N + R*N + 1 + M:R*M*N + R*N + 1 + M + tot]) or np.any(strategy[R*M*N + R*N + 1 + M:R*M*N + R*N + 1 + M + tot] * new_strategy[R*M*N + R*N + 1 + M:R*M*N + R*N + 1 + M + tot] < 0) and (np.any(sigmas[i] > 0) or np.any(lambdas[i] > 0)):
+        
+      correct_scale_params(sigmas, lambdas, sigma_hats, lambda_hats, new_strategy[R*M*N + R*N + 1 + M:R*M*N + R*N + 1 + M + tot], i, N, K, betas, beta_hats, beta_tildes, beta_bars, du_dx_plus, du_dx_minus, etas, eta_hats, eta_bars)
       
-      # if there are more zeros in the new strategy than the previous, or changes in the sign, and the scale parameters aren't already all zeros
-      if np.count_nonzero(new_strategy[2*M*N:2*M*N+N]) < np.count_nonzero(strategy[i][2*M*N:2*M*N+N]) or np.any(strategy[i][2*M*N:2*M*N+N] * new_strategy[2*M*N:2*M*N+N] < 0) and (np.any(sigmas > 0) or np.any(lambdas > 0)) :
-        correct_scale_params(sigmas, lambdas, new_strategy[2*M*N:2*M*N+N], i, N, K, betas, beta_hats, beta_tildes, beta_bars, du_dx, etas, eta_bars)
-        (drdot_dF, dxdot_dF, dydot_dF, drdot_dH, dxdot_dH, dydot_dH, drdot_dW_p, dxdot_dW_p, dydot_dW_p, drdot_dW_n, dxdot_dW_n, dydot_dW_n,drdot_dK_p,
-         dxdot_dK_p, dydot_dK_p, drdot_dK_n, dxdot_dK_n, dydot_dK_n) = ODE_gradient(N,K,M,T,
-                                                                                     phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-                                                                                     ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n)
+      (drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus) = ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
         #print('updating scale params')
       # update strategy and gradient for this actor
-      strategy[i] = new_strategy
-      grad[i] = v[i]
-
-    # update strategies for all actors
-    strategy_history.append(strategy.copy())
-    grad_history.append(grad.copy())
-    strategy_sum.append(min(np.sum(abs(strategy), axis = 1)))
-    if np.all(abs(np.sum(abs(strategy), axis = 1) - 1) < 0.01):
-      sum_below_1 = False
-    if iterations >= 30:
-      # compute difference in strategies
-      strategy_history_10 = np.array(strategy_history[-30:]).reshape((30,N*(2*M*N + N + M)))
-      strategy_diff = np.linalg.norm(strategy_history_10[:29,:]-strategy_history_10[-1,:], axis = 1)
-      strategy_diffs.append(strategy_diff[-1])
-      max_diff = max(strategy_diff)
+    strategy = new_strategy
 
     iterations += 1
     if iterations == max_iters - 1:
       converged = False
-  if has_zero_betas == True:
-    print('sum of betas = 0!!')
-  # plt.figure()
-  # strategy_diffs = [0]*31 + strategy_diffs
-  # plt.plot(np.array(strategy_diffs)/max(strategy_diffs))
-  # strategy_history = np.array(strategy_history).reshape(len(strategy_history),N*(2*M*N + N + M))
-  # grad_history = np.array(grad_history).reshape(len(grad_history),N*(2*M*N + N + M))
-  # dist_from_conv = np.linalg.norm(strategy_history[-1] - strategy_history, axis = 1)
-  # plt.plot(dist_from_conv/max(dist_from_conv),'.')
-  # plt.plot(strategy_sum)
-  return F,H,W,K_p, sigmas,lambdas, converged, strategy_history, grad_history
+
+  return strategy

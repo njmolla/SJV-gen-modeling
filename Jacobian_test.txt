@@ -1,0 +1,108 @@
+import pandas as pd
+import numpy as np
+entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
+N_list=entities['N'].values[:,0]
+N = len(N_list)
+
+K_list=entities['K'].values[:,0]
+K = len(K_list)
+
+M_list=entities['M'].values[:,0]
+M = len(M_list)
+
+tot = N+K+M
+
+R = 3
+jac = np.zeros((R+tot,R+tot))
+
+# dr•/dx
+for i in range(N+K):
+  jac[0,3+i] = phis[0]*(-psis[0]*np.sum(psi_tildes[0]*(de_dE[0,i,:]*E[i,0,:]+np.sum(de_dg[0,:,:]*dg_dG[0,i,:,:]*G[i,0,:,:],axis=0)))-psi_bars[0]*(dt_dT[i]*T[i]+np.sum(np.transpose(dt_dh)*dh_dH[i,:]*H[i,:])))
+
+# for R2
+  jac[1,3+i] = phis[1]*(psi_bars[1]*(dt_dT[i]*T[i] + np.sum(np.transpose(dt_dh)*dh_dH[i]*H[i])) - np.sum(psi_tildes[1]*(de2_de1*(de_dE[0,i]*E[i,0] + np.sum(de_dg[0]*dg_dG[0,i]*G[i,0])) + de_dE[1,i]*E[i,1] + np.sum(de_dg[1]*dg_dG[1,i]*G[i,1],axis=0))))
+
+# for R3
+  jac[2,3+i] = phis[1]*(np.sum(psi_tildes[2]*(de_dE[2,i,:]*E[i,2,:]+np.sum(de_dg[2,:,:]*dg_dG[2,i,:,:]*G[i,2,:,:],axis=0)))-psi_bars[1]*(dt_dT[i]*T[i]+np.sum(np.transpose(dt_dh)*dh_dH[i,:]*H[i,:]))) 
+
+# de/dg, dg/dy is RxMxN
+# de/dE is RxN+KxN
+# sigma_tildes RxN+K
+ 
+### dr•/dy
+for i in range(M):
+  jac[0,3+N+K+i] = phis[0]*(-psis[0]*np.sum(psi_tildes[0]*de_dg[0,i]*dg_dy[0,i]) - psi_bars[0]*dt_dh[i]*dh_dy[i])
+
+  jac[1,3+N+K+i] = phis[1]*(psi_bars[1]*dt_dh[i]*dh_dy[i] - np.sum(psi_tildes[1]*(de2_de1*de_dg[0,i]*dg_dy[0,i] + de_dg[1,i]*dg_dy[1,i])))
+
+  jac[2,3+N+K+i] = phis[1]*(np.sum(psi_tildes[2]*de_dg[2,i]*dg_dy[2,i]) - psi_bars[1]*dt_dh[i]*dh_dy[i])
+
+### dx•/dr
+#db/de, de/dr is RxN+K
+#alphas, beta_tildes, beta_hats are 1xN+K
+#dp_dP N+KxMxT
+for i in range(N+K):
+  jac[3+i,0] = alphas[0,i]*(beta_tildes[0,i]*sigma_tildes[0,i]*db_de[0,i]*de_dr[0,i] + beta_tildes[0,i]*sigma_tildes[1,i]*db_de[1,i]*de2_de1*de_dr[0,i])
+
+  jac[3+i,1] = alphas[0,i]*(beta_tildes[0,i]*sigma_tildes[1,i]*db_de[1,i]*de_dr[1,i])
+
+  jac[3+i,2] = alphas[0,i]*(beta_tildes[0,i]*sigma_tildes[2,i]*db_de[2,i]*de_dr[2,i])
+
+
+### dx•/dx
+P_plus = np.zeros(np.shape(P))
+P_plus[P>=0] = P[P>=0]
+P_minus = np.zeros(np.shape(P))
+P_minus[P<0] = P[P<0]
+
+C_plus = np.zeros(np.shape(C))
+C_plus[C>=0] = C[C>=0]
+C_minus = np.zeros(np.shape(C))
+C_minus[C<0] = C[C<0]
+
+for n in range(N):
+  for i in range(N+K):
+    jac[3+n,3+i] = alphas[0,n]*(beta_tildes[0,n]*sigma_tildes[0,n]*db_de[0,n]*(de_dE[0,i,n]*E[i,0,n] + np.sum(de_dg[0,:,n]*dg_dG[0,i,:,n]*G[i,0,:,n])) 
+  + beta_tildes[0,n]*sigma_tildes[1,n]*db_de[1,n]*(de_dE[1,i,n]*E[i,1,n] + np.sum(de_dg[1,:,n]*dg_dG[1,i,:,n]*G[i,1,:,n]) + de2_de1*(de_dE[0,i,n]*E[i,0,n] + np.sum(de_dg[0,:,n]*dg_dG[0,i,:,n]*G[i,1,:,n]))) 
+  + beta_tildes[0,n]*sigma_tildes[2,n]*db_de[2,n]*(de_dE[2,i,n]*E[i,2,n] + np.sum(de_dg[2,:,n]*dg_dG[2,i,:,n]*G[i,2,:,n])))
+  
+for n in range(N+K+M):  
+  for i in range(N+K):
+    jac[3+n,3+i] += alphas[0,n]*(beta_hats[0,n]*np.sum(sigma_hats[:,n]*dp_dP[i,:,n]*P_plus[i,:,n])
+  - eta_hats[0,n]*np.sum(lambda_hats[:,n]*dp_dP[i,:,n]*P_minus[i,:,n])
+  + betas[0,n]*sigmas[i,n]*dc_dC[i,n]*C_plus[i,n] - etas[0,n]*lambdas[i,n]*dc_dC[i,n]*C_minus[i,n])
+
+# dx•/dx (diagonal)
+for n in range(N):
+  i = n
+  jac[3+n,3+i] = alphas[0,n]*(beta_tildes[0,n]*sigma_tildes[0,n]*db_de[0,n]*(de_dE[0,i,n]*E[i,0,n] + np.sum(de_dg[0,:,n]*dg_dG[0,i,:,n]*G[i,0,:,n])) 
++ beta_tildes[0,n]*sigma_tildes[1,n]*db_de[1,n]*(de_dE[1,i,n]*E[i,1,n] + np.sum(de_dg[1,:,n]*dg_dG[1,i,:,n]*G[i,1,:,n]) + de2_de1*(de_dE[0,i,n]*E[i,0,n] + np.sum(de_dg[0,:,n]*dg_dG[0,i,:,n]*G[i,1,:,n]))) 
++ beta_tildes[0,n]*sigma_tildes[2,n]*db_de[2,n]*(de_dE[2,i,n]*E[i,2,n] + np.sum(de_dg[2,:,n]*dg_dG[2,i,:,n]*G[i,2,:,n])) + 
+beta_hats[0,n]*np.sum(sigma_hats[:,n]*dp_dP[i,:,n]*P_plus[i,:,n])
+- eta_hats[0,n]*np.sum(lambda_hats[:,n]*dp_dP[i,:,n]*P_minus[i,:,n])
++ beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
+
+# dx•/dx (Non-RUs diagonal)
+for n in range(N):
+  i=n
+  jac[3+N+n,3+N+n] = alphas[0,n]*(beta_hats[0,n]*np.sum(sigma_hats[:,n]*dp_dP[i,:,n]*P_plus[i,:,n])
+- eta_hats[0,n]*np.sum(lambda_hats[:,n]*dp_dP[i,:,n]*P_minus[i,:,n])
++ beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
+
+  alphas[0,n]*(beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
+
+
+# dx•/dy (RUs)
+for i in range(N):
+  for m in range(M):
+    jac[3+i,3+N+K+m] = alphas[0,n]*(beta_tildes[0,n]*sigma_tildes[0,n]*db_de[0,n]*de_dg[0,m,n]*dg_dy[0,m,n] + 
+beta_tildes[0,n]*sigma_tildes[1,n]*db_de[1,n]*(de_dg[1,m,n]*dg_dy[1,m,n] + de2_de1*de_dg[0,m,n]*dg_dy[0,m,n]) + 
+beta_tildes[0,n]*sigma_tildes[2,n]*db_de[2,n]*de_dg[2,m,n]*dg_dy[2,m,n] +
+beta_hats[0,n]*sigma_hats[m,n]*dp_dy[m,n]-eta_hats[0,n]*lambda_hats[m,n]*dp_dy[m,n])
+
+
+# dx•/dy (non-RUs)
+for i in range(K+M):
+  for m in range(M):
+    jac[3+N+i,3+N+K+m] = alphas[0,n]*(beta_hats[0,n]*sigma_hats[m,n]*dp_dy[m,n]-eta_hats[0,n]*lambda_hats[m,n]*dp_dy[m,n])
+

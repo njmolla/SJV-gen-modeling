@@ -1,97 +1,143 @@
 import numpy as np
-from numba import jit
+#from numba import jit
 
 
-@jit(nopython=True)
-def compute_Jacobian(N,K,M,T,
-      phi,psis,alphas,betas,beta_hats,beta_tildes,beta_bars,sigmas,etas,lambdas,eta_bars,mus,
-      ds_dr,de_dr,de_dg,dg_dF,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dw_p,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-      F,H,W,K_p):
+#@jit(nopython=True)
+def compute_Jacobian(N,K,M,tot,
+      phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P,
+      ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus):
 
   # --------------------------------------------------------------------------
   # Compute Jacobian (vectorized)
   # --------------------------------------------------------------------------
-  J = np.zeros((T,T))
+  J = np.zeros((tot+3,tot+3))
   # dr•/dr
-  J[0,0] = (phi*(ds_dr - np.sum(psis*de_dr)))[0]
-                               # 1xn
-  # dr•/dx (1x(N))
+  # Jacobian elements calculated separately for each resource
+  J[0,0] = (phis[0]*(ds_dr[0] - psis[0]*np.sum(psi_tildes[0,:]*de_dr[0,:N]))-psi_bars[0]*dt_dr)
+  J[1,0] = phis[1]*(psi_bars[1]*dt_dr*- np.sum(psi_tildes[1,:]*de2_de1*de_dr[0,:N]))
+  J[1,1] = phis[1]*(psis[1]*ds_dr[1]-np.sum(psi_tildes[1,:]*de_dr[1,:N]))
+  J[2,0] = phis[1]*psi_bars[1]*dt_dr
+  J[2,1] = phis[1]*psis[1]*ds_dr[1]
+  J[2,2] = -phis[1]
+  
+
+  # dr•/dx (1x(N+K))
   # For the NxMxN stuff: i = axis 0, m = axis 1, n = axis 2
-  J[0,1:N+1] = -phi * np.sum(
-        np.multiply(psis,np.sum(np.multiply(de_dg, dg_dF * F), axis = 1)),axis = 1)
-                                          # 1xmxn   ixmxn
+  J[0,3:N+K+3] = phis[0] * (-psis[0]*
+        np.sum(psi_tildes[0,:][np.newaxis]*(de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),axis=1))) 
+        - psi_bars[0] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
+        
+  J[1,3:N+K+3] = phis[1]*(np.multiply(psi_bars[1], dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)) - np.sum(
+  psi_tildes[1,:][np.newaxis] * de2_de1 * (de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),
+  axis=1) + de_dE[1]*E[:,1] + np.sum(np.multiply(de_dg[1], dg_dG[1] * G[:,1]),axis=1)), axis=1))
+  
+  J[2,3:N+K+3] = phis[1]*(np.sum(psi_tildes[2,:][np.newaxis]*(de_dE[2]*E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2] * G[:,2]),axis=1)), axis=1) - psi_bars[1] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
+  
+ 
 
   # dr•/dy
-  J[0,N+1:] = -phi * np.sum(
-        np.multiply(psis, de_dg[0] * dg_dy),
-                   # 1xn             1xmxn     mxn
-       axis = 1)
+  J[0,N+K+3:] = phis[0] * (-psis[0] * np.sum(
+        np.multiply(psi_tildes[0][np.newaxis], de_dg[0] * dg_dy[0]),                  # 1xn             1xmxn     mxn
+       axis = 1) - (psi_bars[0]*dt_dh*dh_dy[:,np.newaxis])[:,0])
+       
+  J[1,N+K+3:] = phis[1] * ((psi_bars[1]*dt_dh*np.transpose(dh_dy[np.newaxis]))[:,0] - np.sum(
+        np.multiply(psi_tildes[1,:N][np.newaxis], np.multiply(de2_de1, de_dg[0] * dg_dy[0])  + de_dg[1]*dg_dy[1]),                 # 1xn             1xmxn     mxn
+       axis = 1))
+       
+  J[2,N+K+3:] = phis[1] * (np.sum(
+        np.multiply(psi_tildes[2,:N][np.newaxis],de_dg[2] * dg_dy[2]), axis = 1) - (psi_bars[1]*dt_dh*np.transpose(dh_dy[np.newaxis]))[:,0])                 # 1xn             1xmxn     mxn
 
   # dx•/dr
-  J[1:N+1,0] = (alphas * (betas*db_de*de_dr + beta_hats*dq_da*da_dr))[0]
+  J[3:N+K+3,0] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[0]*db_de[0]*de_dr[0] + beta_tildes[0,:-M]*sigma_tildes[1]*db_de[1]*de2_de1*de_dr[0])
+  J[3:N+K+3,1] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[1]*db_de[1]*de_dr[1])
+  J[3:N+K+3,2] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[2]*db_de[2]*de_dr[2])
                                            # 1xn
-  # dx•/dx for n != i
-  W_p = np.zeros((N,N))
-  assign_when(W_p, W, W>=0)
-  W_n = np.zeros((N,N))
-  assign_when(W_n, W, W<0)
-  J[1:N+1,1:N+1] = np.transpose(np.multiply(alphas,
-        np.multiply(betas*db_de,       np.sum(np.multiply(de_dg, dg_dF*F), axis = 1))
+  # dx•/dx for n != i (NxN+K)
+
+  J[3:N+3,3:N+K+3] = np.transpose(np.multiply(alphas[0,np.newaxis,:N],
+        np.multiply((beta_tildes[0,:N]*sigma_tildes[0,:N]*db_de[0,:N])[np.newaxis],       de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0]*G[:,0]), axis = 1))
                      #  1xn                                ixmxn
-        + np.multiply(beta_hats*dq_da, np.sum(np.multiply(da_dp, dp_dH*H), axis = 1))
-        + np.multiply(beta_tildes,sigmas*dc_dw_p*W_p)
+        + np.multiply((beta_tildes[0,:N]*sigma_tildes[1,:N]*db_de[1,:N])[np.newaxis],       de_dE[1] * E[:,1] + np.sum(np.multiply(de_dg[1], dg_dG[1]*G[:,1]), axis = 1) + np.multiply(de2_de1,de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0],dg_dG[0]*G[:,0]),axis=1)))
+        
+        + np.multiply((beta_tildes[0,:N]*sigma_tildes[2,:N]*db_de[2,:N])[np.newaxis], de_dE[2] * E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2]*G[:,2]), axis = 1))
+
+      ))
+      
+  # dx•/dx for n != i, adding in terms that apply to non-govt orgs and dec centers (TxN+K)
+  P_plus = np.zeros(np.shape(P))
+  assign_when(P_plus, P, P>=0)
+  P_minus = np.zeros(np.shape(P))
+  assign_when(P_minus, P, P<0)
+  C_plus = np.zeros(np.shape(C))
+  assign_when(C_plus, C, C>=0)
+  C_minus = np.zeros(np.shape(C))
+  assign_when(C_minus, C, C<0)
+  
+  J[3:tot+3,3:N+K+3] += np.transpose(np.multiply(alphas,
+                                    # 1xT
+         np.multiply(beta_hats,np.sum(np.multiply(sigma_hats,dp_dP*P_plus),axis = 1)) - np.multiply(eta_hats,np.sum(np.multiply(lambda_hats,dp_dP*P_minus),axis=1))
+                                          #(N+K)xT
+        + np.multiply(betas,sigmas*dc_dC*C_plus) - np.multiply(etas,lambdas*dc_dC*C_minus)
                        # 1xn            ixn
-        - np.multiply(etas,lambdas*dc_dw_n*W_n)
       ))
 
- # dx•/dx for n = i (overwrite the diagonal)
+ # dx•/dx for n = i (overwrite the diagonal) (unvectorized)
+ # for RUs
   for i in range(N):
 
-    J[i+1,i+1] = alphas[0,i] * (
-                     betas[0,i]     * db_de[0,i] * np.sum(de_dg[0,:,i] * dg_dF[i,:,i] * F[i,:,i])
-                   + beta_hats[0,i] * dq_da[0,i] * np.sum(da_dp[0,:,i] * dp_dH[i,:,i] * H[i,:,i])
-                   + beta_bars[0,i] * du_dx[i]
-                   - eta_bars[i] * dl_dx[i]
+    J[i+3,i+3] = alphas[0,i] * (
+                     beta_tildes[0,i]* sigma_tildes[0,i] * db_de[0,i] * np.sum(de_dg[0,:,i] * dg_dG[0,i,:,i] * G[i,0,:,i])
+                   + beta_tildes[0,i]* sigma_tildes[1,i] * db_de[1,i] * np.sum(de_dg[1,:,i] * dg_dG[1,i,:,i] * G[i,1,:,i])
+                   + de2_de1 * np.sum(de_dg[0,:,i] * dg_dG[0,i,:,i] * G[i,0,:,i])
+                   + beta_tildes[0,i]* sigma_tildes[2,i] * db_de[2,i] * np.sum(de_dg[2,:,i] * dg_dG[2,i,:,i] * G[i,2,:,i])
+                   + beta_hats[0,i] * np.sum(sigma_hats[:,i]*dp_dP[i,:,i]*P_plus[i,:,i]) - eta_hats[0,i] * np.sum(lambda_hats[:,i]*dp_dP[i,:,i]*P_minus[i,:,i])
+                   + beta_bars[0,i] * du_dx_plus[i]
+                   - eta_bars[i] * du_dx_minus[i]
                  )
-
+                 
 #  indices = np.arange(1,N+1)  # Access the diagonal of the actor part.
 #  J[indices,indices] = alphas[0] * (
-#        (betas*db_de)[0]*np.sum(de_dg[0]*dg_dF[np.arange(N),:,np.arange(N)].transpose()*F[np.arange(N),:,np.arange(N)].transpose(),axis=0)
+#        (beta_tildes*db_de)[0]*np.sum(de_dg[0]*dg_dG[np.arange(N),:,np.arange(N)].transpose()*G[np.arange(N),:,np.arange(N)].transpose(),axis=0)
 #        #                                                          mxn                                 mxn
-#        + (beta_hats*dq_da)[0]*np.sum(da_dp[0]*dp_dH[np.arange(N),:,np.arange(N)].transpose()*H[np.arange(N),:,np.arange(N)].transpose(),axis=0)
+#        + (sigma_tildes*dq_da)[0]*np.sum(da_dp[0]*dp_dH[np.arange(N),:,np.arange(N)].transpose()*H[np.arange(N),:,np.arange(N)].transpose(),axis=0)
 #        - eta_bars*dl_dx
 #      )
 
-  # dx•/dy
-  J[1:N+1,N+1:] = np.transpose(alphas * (
-        np.multiply(betas*db_de, de_dg[0]*dg_dy)
-                    # 1n   1n                1mn     mn
-        + np.multiply(beta_hats*dq_da, da_dp[0]*dp_dy)
+  # dx•/dy (NxM)
+  J[3:N+3,N+K+3:] = np.transpose(alphas[0,:N] * (
+        np.multiply(beta_tildes[0,:N]*sigma_tildes[0,:N]*db_de[0,:N], de_dg[0]*dg_dy[0])
+                              # N                              
+        + np.multiply(beta_tildes[0,:N]*sigma_tildes[1,:N]*db_de[1,:N], de_dg[1]*dg_dy[1] + np.multiply(de2_de1,de_dg[0]*dg_dy[0]))
+        + np.multiply(beta_tildes[0,:N]*sigma_tildes[2,:N]*db_de[2,:N], de_dg[2]*dg_dy[2])
+        + np.multiply(beta_hats[0,:N], sigma_hats[:,:N]*dp_dy[:,:N]) - np.multiply(eta_hats[0,:N], lambda_hats[:,:N]*dp_dy[:,:N])
+        
       ))
+  # dx•/dy (K+MxM)   
+  J[N+3:,N+K+3:] = np.transpose(alphas[0,N:] * (
+           np.multiply(beta_hats[0,N:], sigma_hats[:,N:]*dp_dy[:,N:]) - np.multiply(eta_hats[0,N:], lambda_hats[:,N:]*dp_dy[:,N:])
+      ))
+  
+  # dx•/dx for n = i (non-RUs) 
+  for i in range(K):
 
-  # dy•/dr = 0
-  # dy•/dx, result is mxi
-  K_plus = np.zeros((N,M))
-  assign_when(K_plus, K_p, K_p>=0)
-  K_n = np.zeros((N,M))
-  assign_when(K_n, np.abs(K_p), K_p<0)
-  J[N+1:,1:N+1] = np.transpose(np.multiply(mus,di_dK_p*K_plus - di_dK_n*K_n))  # ixjxm
-
-#
-  # dy•/dy = 0 for m != j
-
-
-  # dy•/dy for m = j
+    J[i+N+3,i+N+3] = alphas[0,N+i] * (
+                   beta_hats[0,N+i] * np.sum(sigma_hats[:,N+i]*dp_dP[N+i,:,N+i]*P_plus[N+i,:,N+i]) - eta_hats[0,N+i] * np.sum(lambda_hats[:,N+i]*dp_dP[N+i,:,N+i]*P_minus[N+i,:,N+i])
+                   + beta_bars[0,N+i] * du_dx_plus[N+i]
+                   - eta_bars[N+i] * du_dx_minus[N+i]
+                 )  
+      
+  # dy•/dy
   for i in range(M):
-    J[-M+i:,-M+i:] = mus[0,i]*(di_dy_p[0,i] - di_dy_n[0,i])
 
-#  indices = np.arange(N+1,T)  # Access the diagonal of the governing agency part.
-#  J[indices,indices] = mus[0]*(di_dy_p - di_dy_n)[0]
+    J[i+N+K+3,i+N+K+3] = alphas[0,i] * (
+                   beta_bars[0,i] * du_dx_plus[i]
+                   - eta_bars[i] * du_dx_minus[i]
+                 )
 
   return J
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def assign_when(lhs, rhs, conditions):
   """
   This does
