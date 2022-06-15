@@ -13,8 +13,8 @@ def compute_Jacobian(N,K,M,tot,
   J = np.zeros((tot+3,tot+3))
   # dr•/dr
   # Jacobian elements calculated separately for each resource
-  J[0,0] = (phis[0]*(ds_dr[0] - psis[0]*np.sum(psi_tildes[0,:]*de_dr[0,:N]))-psi_bars[0]*dt_dr)
-  J[1,0] = phis[1]*(psi_bars[1]*dt_dr*- np.sum(psi_tildes[1,:]*de2_de1*de_dr[0,:N]))
+  J[0,0] = phis[0]*(ds_dr[0] - psis[0]*np.sum(psi_tildes[0,:]*de_dr[0,:N])-psi_bars[0]*dt_dr)
+  J[1,0] = phis[1]*(psi_bars[1]*dt_dr - np.sum(psi_tildes[1,:]*de2_de1*de_dr[0,:N]))
   J[1,1] = phis[1]*(psis[1]*ds_dr[1]-np.sum(psi_tildes[1,:]*de_dr[1,:N]))
   J[2,0] = phis[1]*psi_bars[1]*dt_dr
   J[2,1] = phis[1]*psis[1]*ds_dr[1]
@@ -129,9 +129,9 @@ def compute_Jacobian(N,K,M,tot,
   # dy•/dy
   for i in range(M):
 
-    J[i+N+K+3,i+N+K+3] = alphas[0,i] * (
-                   beta_bars[0,i] * du_dx_plus[i]
-                   - eta_bars[i] * du_dx_minus[i]
+    J[i+N+K+3,i+N+K+3] = alphas[0,N+K+i] * (
+                   beta_bars[0,N+K+i] * du_dx_plus[N+K+i]
+                   - eta_bars[N+K+i] * du_dx_minus[N+K+i]
                  )
 
   return J

@@ -82,27 +82,29 @@ beta_hats[0,n]*np.sum(sigma_hats[:,n]*dp_dP[i,:,n]*P_plus[i,:,n])
 - eta_hats[0,n]*np.sum(lambda_hats[:,n]*dp_dP[i,:,n]*P_minus[i,:,n])
 + beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
 
-# dx•/dx (Non-RUs diagonal)
-for n in range(N):
-  i=n
-  jac[3+N+n,3+N+n] = alphas[0,n]*(beta_hats[0,n]*np.sum(sigma_hats[:,n]*dp_dP[i,:,n]*P_plus[i,:,n])
-- eta_hats[0,n]*np.sum(lambda_hats[:,n]*dp_dP[i,:,n]*P_minus[i,:,n])
-+ beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
-
-  alphas[0,n]*(beta_bars[0,n]*du_dx_plus[n] - eta_bars[n]*du_dx_minus[n])
-
 
 # dx•/dy (RUs)
-for i in range(N):
+for n in range(N):
   for m in range(M):
-    jac[3+i,3+N+K+m] = alphas[0,n]*(beta_tildes[0,n]*sigma_tildes[0,n]*db_de[0,n]*de_dg[0,m,n]*dg_dy[0,m,n] + 
+    jac[3+n,3+N+K+m] = alphas[0,n]*(beta_tildes[0,n]*sigma_tildes[0,n]*db_de[0,n]*de_dg[0,m,n]*dg_dy[0,m,n] + 
 beta_tildes[0,n]*sigma_tildes[1,n]*db_de[1,n]*(de_dg[1,m,n]*dg_dy[1,m,n] + de2_de1*de_dg[0,m,n]*dg_dy[0,m,n]) + 
 beta_tildes[0,n]*sigma_tildes[2,n]*db_de[2,n]*de_dg[2,m,n]*dg_dy[2,m,n] +
 beta_hats[0,n]*sigma_hats[m,n]*dp_dy[m,n]-eta_hats[0,n]*lambda_hats[m,n]*dp_dy[m,n])
 
 
 # dx•/dy (non-RUs)
-for i in range(K+M):
+for n in range(K+M):
   for m in range(M):
-    jac[3+N+i,3+N+K+m] = alphas[0,n]*(beta_hats[0,n]*sigma_hats[m,n]*dp_dy[m,n]-eta_hats[0,n]*lambda_hats[m,n]*dp_dy[m,n])
+    jac[3+N+n,3+N+K+m] = alphas[0,N+n]*(beta_hats[0,N+n]*sigma_hats[m,N+n]*dp_dy[m,N+n]-eta_hats[0,N+n]*lambda_hats[m,N+n]*dp_dy[m,N+n])
+    
+# dx•/dx (Non-RUs diagonal)
+for n in range(K):
+  i=n
+  jac[3+N+n,3+N+n] = alphas[0,N+n]*(beta_hats[0,N+n]*np.sum(sigma_hats[:,N+n]*dp_dP[N+i,:,N+n]*P_plus[N+i,:,N+n])
+- eta_hats[0,N+n]*np.sum(lambda_hats[:,N+n]*dp_dP[N+i,:,N+n]*P_minus[N+i,:,N+n])
++ beta_bars[0,N+n]*du_dx_plus[N+n] - eta_bars[N+n]*du_dx_minus[N+n])
 
+# dy•/dy (Non-RUs diagonal)
+
+for n in range(M):
+  jac[3+N+K+n,3+N+K+n] = alphas[0,N+K+n]*(beta_bars[0,N+K+n]*du_dx_plus[N+K+n] - eta_bars[N+K+n]*du_dx_minus[N+K+n])
