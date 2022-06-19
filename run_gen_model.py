@@ -40,7 +40,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   psi_tildes = np.zeros((3,N)) # 
   psi_tildes[0,1:3] = np.random.dirichlet([0.3,0.7],1) # sw split
-  psi_tildes[1,1:N] = np.random.dirichlet([0.05,0.25,0.1,0.4,0.05,0.05],1) # gw split
+  psi_tildes[1] = np.random.dirichlet([0.000001,0.05,0.25,0.1,0.4,0.05,0.05],1) # gw split
   psi_tildes[2,1:N] = [0.07,0.4,0.07,0.4,0.03,0.03] # gw discharge split
   alphas = np.zeros((1,tot))
   alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
@@ -75,7 +75,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   beta_bars[0,:N] = beta_params[:,2,0]
 
   sigma_tildes = np.zeros([3,N+K]) # gain based on each resource state variable
-  sigma_tildes[1,~sw_users] = 1 # rural communities and white area growers rely entirely on groundwater
+  sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
   sigma_tildes[1,0] = np.random.uniform(0.4,0.6) # salience of gw availability to communities
   sigma_tildes[2,0] = 1 - sigma_tildes[1,0] # salience of gw quality to communities
   sigma_tildes[0,sw_users] = np.random.uniform(0.1,0.5,(2,)) # reliance of growers w/ sw access on sw
@@ -85,8 +85,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sigma_hats = np.zeros((M,tot))
 
   for i in range(tot-1): # loop through to fill in each column
-    sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.default_rng().dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
-    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.default_rng().dirichlet(sigma_weights[N+K:,:][:,i][sigma_weights[N+K:,:][:,i]>0])
+    sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
+    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[N+K:,:][:,i][sigma_weights[N+K:,:][:,i]>0])
     
   # non-govt and govt orgs actors have natural gain and gain from collaboration from other actors (betas) and govt (beta_hats)
   total = np.sum(sigma_weights[:,N:N+K+M],axis = 0)
@@ -103,8 +103,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
   for i in range(tot): # loop through to fill in each (each column sums to 1)
-    lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.default_rng().dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
-    lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.default_rng().dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
+    lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
+    lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
  
   # losses
   etas = np.zeros((1,tot))
@@ -231,7 +231,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG = np.random.uniform(0.5,1,(N+K,M,N))  # dg_m,n/(dF_i,m,n * x_i) is ixmxn $
   # get indices for some exceptions
   big_growers_idx = np.nonzero(N_list=='investor growers')
-  IDs_idx = np.nonzero(M_list=='irrigation districts')
+  IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
   growers = np.nonzero(np.any([N_list == 'small growers', N_list =='investor growers', N_list == 'small growers (white area)', N_list =='investor growers (white area)'],axis=0))[0]
   grower_groups = np.nonzero(np.any([K_list == 'Grower advocacy groups', K_list == 'UC Extension/research community', K_list == 'Sustainable conservation', K_list == 'MPEP', K_list == 'PCAs/CCAs'],axis=0))[0]
   EJ_groups = np.nonzero(K_list=='EJ groups')
@@ -315,7 +315,7 @@ def run_system(user = None):
       final system
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
-  #print('a', end =" ")
+
   entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
   N_list=entities['N'].values[:,0]
   N = len(N_list)
@@ -334,9 +334,20 @@ def run_system(user = None):
   
   ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus = set_fixed_exp_params(N,M,K,N_list,M_list,K_list,tot,R)
   
+  # check stability before strategy optimization
+  J = compute_Jacobian(N,K,M,tot,
+      phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P,
+      ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
+        
+  eigvals = np.linalg.eigvals(J)
+  if np.all(eigvals.real < 0):  # stable if real part of eigenvalues is negative
+    stability_1 = True
+  else:
+    stability_1 = False  # unstable if real part is positive, inconclusive if 0
+  
   if user != None:
-    max_iters = 100 
-    strategy = optimize_strategy(max_iters, user, N, K, M, tot, R,
+    max_iters = 100  # change back to 100!! 
+    strategy, stability_2, stability_3 = optimize_strategy(max_iters, user, N, K, M, tot, R,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
   else:
     strategy = None
@@ -358,8 +369,9 @@ def run_system(user = None):
   else:
     stability = False  # unstable if real part is positive, inconclusive if 0
 
-     
-  return (stability, strategy, J, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
+  stability_final = stability 
+  
+  return (stability_final, stability_1, stability_2, stability_3, strategy, J, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
 
 
 # if __name__ == "__main__":

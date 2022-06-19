@@ -115,8 +115,11 @@ def grad_descent_constrained(initial_point, alpha, objective, i, N, K, M, R, tot
   '''
 
   x = initial_point  # strategy
+  print('')
+  print('strategy:',x[403])
+
   # calculate how steady state changes with respect to strategy parameters
-  dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus\
+  dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability\
   = steady_state_gradient(x, objective, i, N, K, M, R, tot,
           phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
           
@@ -124,12 +127,12 @@ def grad_descent_constrained(initial_point, alpha, objective, i, N, K, M, R, tot
   # calculate how objective changes wrt strategy parameters (the gradient)
   grad = objective_grad(x, objective, i, N, K, M, R, tot,
           psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus)
+  print('gradient:',grad[403])
 
   d = len(x)
   #v[n] = 0.9*v[n] + alpha*grad
   # Follow the projected gradient for a fixed step size alpha
   x = x + alpha*grad
-  #print(x)
   plane = np.sign(x)
   plane[abs(plane)<0.00001] = 1
   if sum(abs(x)) > 1:
@@ -149,7 +152,7 @@ def grad_descent_constrained(initial_point, alpha, objective, i, N, K, M, R, tot
         raise Exception('bisection bounds did not work')
       x = plane * np.maximum(x*plane - mu, 0)
 
-  return x# normally return only x
+  return x, stability# normally return only x
 
 def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus):
   # Compute how the rhs of system changes with respect to each strategy parameter
@@ -224,6 +227,7 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
   drdot_dH = np.zeros((3,N+K,M))
   drdot_dH[0] = -phis[0]*psi_bars[0]*np.multiply(np.transpose(dt_dh), dh_dH)
   drdot_dH[1] = phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
+  print('drdot/dH:', drdot_dH[1,0,3])
   drdot_dH[2] = -phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
   
   dxdot_dH = np.zeros((N,N+K,M))
@@ -276,22 +280,23 @@ def optimize_strategy(max_iters, i, N, K, M, tot, R,
   '''
   # step size
   alpha = 0.001
-
   # Initialize strategy
   strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
   #v = np.zeros((N, len(strategy)) # velocity for gradient descent with momentum
   tolerance = alpha #
   max_diff = 1  # arbitrary initial value, List of differences in euclidean distance between strategies in consecutive iterations
   iterations = 0
-  objective = i # this isn't necessarily the case for non-resource users
+  objective = i # this isn't the case for non-resource users
+  stability_history = np.zeros(max_iters)
 
   (drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus) = ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
   
   
   while (max_diff > tolerance) and iterations < max_iters:
-
-    new_strategy = grad_descent_constrained(strategy, alpha, objective, i, N, K, M, R, tot,
+    new_strategy, stability = grad_descent_constrained(strategy, alpha, objective, i, N, K, M, R, tot,
         phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
+    
+    stability_history[iterations] = stability
 
 
     # Check if there are new zeros or changes in the sign of the strategy parameters to see if we need to update scale parameters
@@ -311,5 +316,9 @@ def optimize_strategy(max_iters, i, N, K, M, tot, R,
     iterations += 1
     if iterations == max_iters - 1:
       converged = False
+      
+  stability_2 = stability_history[0] == True
+  stability_3 = np.all(stability_history[1:]==True)
+    
 
-  return strategy
+  return strategy, stability_2, stability_3

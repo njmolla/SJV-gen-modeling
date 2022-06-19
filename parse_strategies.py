@@ -37,6 +37,7 @@ strategies[strategies > 0] = 1
 unique_strategies, counts = np.unique(strategies, axis=0, return_counts = True)
 
 def translate_strategies(strategy):
+  strategy[np.abs(strategy)<0.01] = 0 # do this again in case we're translating an individual strategy
   translation = [] # list of actions within each strategy
   G = strategy[0:R*M*N].reshape((R,M,N)) # affect extraction policy (for particular actor)
   H = strategy[R*M*N + R*N + 1:R*M*N + R*N + 1 + M] # affect recharge policy
@@ -45,9 +46,11 @@ def translate_strategies(strategy):
   
   for i in range(len(np.nonzero(G)[0])):
     if G[np.nonzero(G)][i] > 0:
-      action = ['support %s effect on %s extraction of %s' %(M_list[np.nonzero(G)[1][i]], N_list[np.nonzero(G)[2][i]], R_list[np.nonzero(G)[0][i]])]
+      action = ['support %s effect on %s extraction of %s' %(M_list[np.nonzero(G)[1][i]],
+          N_list[np.nonzero(G)[2][i]], R_list[np.nonzero(G)[0][i]])]
     else:
-      action = ['oppose %s effect on %s extraction of %s' %(M_list[np.nonzero(G)[1][i]], N_list[np.nonzero(G)[2][i]], R_list[np.nonzero(G)[0][i]])]
+      action = ['oppose %s effect on %s extraction of %s' %(M_list[np.nonzero(G)[1][i]], 
+          N_list[np.nonzero(G)[2][i]], R_list[np.nonzero(G)[0][i]])]
     translation += action
       
   for i in range(len(np.nonzero(H)[0])):
@@ -59,7 +62,6 @@ def translate_strategies(strategy):
     
   entity_list = np.concatenate((N_list, K_list, M_list))
   
-  
   for i in range(len(np.nonzero(C)[0])):
     if C[np.nonzero(C)][i] > 0:
       action = ['support/collaborate with %s' %(entity_list[np.nonzero(C)[0][i]])]
@@ -69,9 +71,9 @@ def translate_strategies(strategy):
   
   for i in range(len(np.nonzero(P)[0])):
     if P[np.nonzero(P)][i] > 0:
-      action = ['support %s support of %s' %(M_list[np.nonzero(P)[0,i]],entity_list[np.nonzero(P)[1,i]])]
+      action = ['support %s support of %s' %(M_list[np.nonzero(P)[0][i]],entity_list[np.nonzero(P)[1][i]])]
     else:
-      action = ['oppose %s support of %s' %(M_list[np.nonzero(P)[0,i]],entity_list[np.nonzero(P)[1,i]])]
+      action = ['oppose %s support of %s' %(M_list[np.nonzero(P)[0][i]],entity_list[np.nonzero(P)[1][i]])]
     translation += action  
   return translation
 
@@ -81,7 +83,7 @@ for strategy in unique_strategies:
   translation = translate_strategies(strategy)
   strategies_translated += [translation]
 
-  
+print(np.array(strategies_translated)[counts>=3])
 
 # def index_to_action(index):
   # if index < R*M*N:

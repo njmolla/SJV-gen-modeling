@@ -18,6 +18,13 @@ def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
   J = compute_Jacobian(N,K,M,tot,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P,
       ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
+  eigvals = np.linalg.eigvals(J)
+  if np.all(eigvals.real < 0):  # stable if real part of eigenvalues is negative
+    stability = True
+  else:
+    stability = False  # unstable if real part is positive, inconclusive if 0
+    
+
   #print('Jacobian:',str(J))
   # Compute inverse Jacobian
   J_inv = np.linalg.inv(J)
@@ -28,11 +35,12 @@ def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
   dR_dE, dX_dE = multiply_by_inverse_jacobian(drdot_dE, dxdot_dE, J_inv, tot, N, M, R)
   dR_dT, dX_dT = multiply_by_inverse_jacobian(drdot_dT, dxdot_dT, J_inv, tot, N, M, R)
   dR_dH, dX_dH = multiply_by_inverse_jacobian(drdot_dH, dxdot_dH, J_inv, tot, N, M, R)
+  print('dR*/dH:', dR_dH[1,0,3])
   dR_dC_plus, dX_dC_plus = multiply_by_inverse_jacobian(drdot_dC_plus, dxdot_dC_plus, J_inv, tot, N, M, R)
   dR_dC_minus, dX_dC_minus = multiply_by_inverse_jacobian(drdot_dC_minus, dxdot_dC_minus, J_inv, tot, N, M, R)
   dR_dP_plus, dX_dP_plus = multiply_by_inverse_jacobian(drdot_dP_plus, dxdot_dP_plus, J_inv, tot, N, M, R)
   dR_dP_minus, dX_dP_minus = multiply_by_inverse_jacobian(drdot_dP_minus, dxdot_dP_minus, J_inv, tot, N, M, R)
-  return dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus
+  return dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability
 
 #@jit(nopython=True)
 def objective_grad(strategy, n, l, N, K, M, R, tot,
