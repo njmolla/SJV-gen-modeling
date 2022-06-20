@@ -217,8 +217,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   grad_P_minus[1] += de2_de1*grad_P_minus[0]
   grad_P_plus[1] += de2_de1*grad_P_plus[0]
   
-  # average objectives across resources to get an aggregated objective. average is weighted by sigma_tildes, an indication of importance of 
-  # each resource to the user
+  # average objectives across resources to get an aggregated objective. average is weighted by sigma_tildes, an indication of #importance of each resource to the user
   grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_G, axis=0)
   grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_E, axis=0)
   grad_T_avg = np.sum(sigma_tildes[:,l]*grad_T, axis=0)

@@ -26,7 +26,7 @@ resource_user = 'rural communities'
 #resource_user = 'investor growers'
 #resource_user = 'investor growers (white area)'
 
-with open('strategies_%s_0'%(resource_user), 'rb') as f:
+with open('strategies_%s_looping'%(resource_user), 'rb') as f:
   strategies = pickle.load(f) 
 
   

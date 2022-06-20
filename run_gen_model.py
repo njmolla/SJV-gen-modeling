@@ -180,7 +180,9 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # 2: small district farmers
   # 3: investor district farmers
   # 4: small white area growers
-  # 5: investor white area growers
+  # 5: investor white area growers 
+  
+  # TO DO: fix parameterization for water quality!!!
   sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
@@ -191,7 +193,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[1,2] = np.random.uniform(0,0.5)
   de_dr[1,3] = np.random.uniform(1,2)
   de_dr[1,4] = np.random.uniform(0,0.5)
-  de_dr[2,0] = np.random.uniform(1,2)
+  de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
   de2_de1 = -1
   de_dg = np.zeros((3,M,N))  ###### $
@@ -315,7 +317,7 @@ def run_system(user = None):
       final system
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
-
+  print('b')
   entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
   N_list=entities['N'].values[:,0]
   N = len(N_list)
@@ -346,7 +348,7 @@ def run_system(user = None):
     stability_1 = False  # unstable if real part is positive, inconclusive if 0
   
   if user != None:
-    max_iters = 100  # change back to 100!! 
+    max_iters = 100 # change back to 100!! 
     strategy, stability_2, stability_3 = optimize_strategy(max_iters, user, N, K, M, tot, R,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
   else:
