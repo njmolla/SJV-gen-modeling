@@ -67,20 +67,30 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   # grad G should be R,R,M,N, before being aggregated into one objective. dR_dG is R,N+K,R,M,N. dX_dG is tot,N+K,R,M,N
   grad_G = np.zeros((R,R,M,N))
   
+  G_copy = G
+  G_copy[:,:,:,1:] = 0
+  
+  E_copy = E
+  E_copy[:,:,1:] = 0  
+  
   for i in range(R):
     grad_G[i] = de_dr[i,n] * dR_dG[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M,1,1,1)), dX_dG[N+K:,l])
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1,1,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1,1,1)),
                                                # 1m            km          km
                     np.reshape(dX_dG[:N+K,l], (N+K,1,R,M,N))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1,1,1)),dX_dG[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1,1,1)),dX_dG[:N+K,l]),axis=0)
   # special case for i=n     
   grad_G[np.arange(R),np.arange(R),:,n] += de_dg[:,:,n]*dg_dG[:,n,:,n]
+  
+  # subtract off added term in diagonal for dischargers (for whom G is technically inapplicable)
+  if n != 0:
+    grad_G[2,2,:,n] += -de_dg[:,:,n]*dg_dG[:,n,:,n]
   
   #special case for e2
   grad_G[1] += de2_de1*grad_G[0]
@@ -94,7 +104,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1,1)),
                                                # 1m            km          km
                     np.reshape(dX_dE[:N+K,l], (N+K,1,R,N))
                        # k1ji
@@ -104,6 +114,10 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
         
   # special case for i=n     
   grad_E[np.arange(R),np.arange(R),n] += de_dE[:,n,n]
+  
+    # subtract off added term in diagonal for dischargers (for whom G is technically inapplicable)
+  if n != 0:
+    grad_E[2,2,n] += -de_dE[:,n,n]
   
   #special case for e2
   grad_E[1] += de2_de1*grad_E[0]
@@ -117,13 +131,13 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M)),
                                                # 1m            km          km
                     np.reshape(dX_dT[:N+K,l], (N+K,1))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K)),dX_dT[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K)),dX_dT[:N+K,l]),axis=0)
           
   #special case for e2
   grad_T[1] += de2_de1*grad_T[0]
@@ -138,13 +152,13 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1)),
                                                # 1m            km          km
                     np.reshape(dX_dH[:N+K,l], (N+K,1,M))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1)),dX_dH[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1)),dX_dH[:N+K,l]),axis=0)
           
   #special case for e2
   grad_H[1] += de2_de1*grad_H[0]
@@ -159,19 +173,19 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1)),
                                                # 1m            km          km
                     np.reshape(dX_dC_plus[:N+K,l], (N+K,1,tot))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1)),dX_dC_plus[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1)),dX_dC_plus[:N+K,l]),axis=0)
         
     grad_C_minus[i] = de_dr[i,n] * dR_dC_minus[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M,1)), dX_dC_minus[N+K:,l])
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1)),
                                                # 1m            km          km
                     np.reshape(dX_dC_minus[:N+K,l], (N+K,1,tot))
                        # k1ji
@@ -193,25 +207,25 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1,1)),
                                                # 1m            km          km
                     np.reshape(dX_dP_plus[:N+K,l], (N+K,1,M,tot))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1,1)),dX_dP_plus[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1,1)),dX_dP_plus[:N+K,l]),axis=0)
         
     grad_P_minus[i] = de_dr[i,n] * dR_dP_minus[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M,1,1)), dX_dP_minus[N+K:,l])
                    # scalar                               jxi         # m                             mji
             + np.sum(
                 np.multiply(  # Both factors need to be kmji
-                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G[:,i,:,n]), (N+K,M,1,1)),
+                    np.reshape(np.multiply(de_dg[i,:,n],dg_dG[i,:,:,n]*G_copy[:,i,:,n]), (N+K,M,1,1)),
                                                # 1m            km          km
                     np.reshape(dX_dP_minus[:N+K,l], (N+K,1,M,tot))
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1,1)),dX_dP_minus[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1,1)),dX_dP_minus[:N+K,l]),axis=0)
           
   #special case for e2
   grad_P_minus[1] += de2_de1*grad_P_minus[0]

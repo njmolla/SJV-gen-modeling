@@ -186,6 +186,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
+  ds_dr[0] = -1
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)
@@ -349,7 +350,7 @@ def run_system(user = None):
   
   if user != None:
     max_iters = 100 # change back to 100!! 
-    strategy, stability_2, stability_3 = optimize_strategy(max_iters, user, N, K, M, tot, R,
+    strategy, stability_2, stability_3, converged, strategy_history, grad_history = optimize_strategy(max_iters, user, N, K, M, tot, R,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
   else:
     strategy = None
@@ -373,7 +374,8 @@ def run_system(user = None):
 
   stability_final = stability 
   
-  return (stability_final, stability_1, stability_2, stability_3, strategy, J, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
+  
+  return (stability_final, stability_1, stability_2, stability_3, converged, strategy_history, grad_history, strategy, J, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
 
 
 # if __name__ == "__main__":
