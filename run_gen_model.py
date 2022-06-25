@@ -16,12 +16,13 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   phis[0] = 1 # sw
   phis[1] = np.random.uniform(0.001,0.004,(1,)) #gw
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.9,1,(1,)) #sw
+  psis[0] = np.random.uniform(0.3,0.5,(1,)) #sw
   psis[1] = np.random.uniform(0.01,0.02,(1,)) #gw
-  eq_R_ratio = np.random.uniform(0.1,0.5,(1,))
   psi_bars = np.zeros(2) 
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
-  psi_bars[1] = psi_bars[0]*(phis[0]/phis[1])*eq_R_ratio
+  psi_bars[1] = 1-psis[1]
+  #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
+  eq_R_ratio = psi_bars[1]/(psi_bars[0]*(phis[0]/phis[1]))
   
   # 1: DACs
   # 2: small district farmers

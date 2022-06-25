@@ -186,11 +186,11 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
                 # 1mn    kmn
     ), (2,0,1))
     
-  dxdot_dG[0,:,2,:,0] = np.transpose(np.multiply(
+  dxdot_dG[0,:,2,:,0] = np.multiply(
            #n k m (gets rid of last index)
       alphas[0,0]*beta_tildes[0,0]*sigma_tildes[2,0]*db_de[2,0],
       np.multiply(de_dg[2,:,0],dg_dG[2,:,:,0])
-    ), (2,0,1))    
+    )    
   
   # For strategy E
   

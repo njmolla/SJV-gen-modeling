@@ -115,7 +115,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   # special case for i=n     
   grad_E[np.arange(R),np.arange(R),n] += de_dE[:,n,n]
   
-    # subtract off added term in diagonal for dischargers (for whom G is technically inapplicable)
+    # subtract off added term in diagonal for dischargers (for whom E is technically inapplicable)
   if n != 0:
     grad_E[2,2,n] += -de_dE[:,n,n]
   
