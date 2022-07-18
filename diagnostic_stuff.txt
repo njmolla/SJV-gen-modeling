@@ -1,0 +1,10 @@
+import pandas as pd
+
+strategies_sum = np.sum(abs(strategies),axis=1)
+converged = strategies_sum >= 1 # need to check whether this is true
+weird_strategies = np.any([strategies[:,301]<0, strategies[:,405]<0, strategies[:,430]<0], axis=0)
+data = np.concatenate((converged[:,np,newaxis],stabilities),axis=1)
+df = pd.DataFrame(data, columns=['Converged?', 'Initial stability', 'pre-optimization stability', 'stability throughout optimization', 'final'])
+all_stable = np.all(stabilities==[1,1,1,1],axis=1)
+
+301, 405, 430

@@ -33,7 +33,9 @@ avg_strategy = np.average(strategies,axis=0)
 stdev_strategy = np.std(strategies,axis=0)
 
 plt.figure()
-plt.plot(np.transpose(strategies))
+#plt.plot(np.transpose(strategies))
+plt.figure()
+plt.plot(np.transpose(strategies[:,abs(np.sum(strategies,axis=0))>1e-5]),'.')
 plt.savefig('%s_full_strategies.svg'%(resource_user))
 
 G = avg_strategy[0:R*M*N].reshape((R,M,N))

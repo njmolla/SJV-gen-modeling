@@ -35,7 +35,7 @@ def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
   dR_dE, dX_dE = multiply_by_inverse_jacobian(drdot_dE, dxdot_dE, J_inv, tot, N, M, R)
   dR_dT, dX_dT = multiply_by_inverse_jacobian(drdot_dT, dxdot_dT, J_inv, tot, N, M, R)
   dR_dH, dX_dH = multiply_by_inverse_jacobian(drdot_dH, dxdot_dH, J_inv, tot, N, M, R)
-  print('dR*/dH:', dR_dH[1,0,3])
+  #print('dR*/dH:', dR_dH[1,0,3])
   dR_dC_plus, dX_dC_plus = multiply_by_inverse_jacobian(drdot_dC_plus, dxdot_dC_plus, J_inv, tot, N, M, R)
   dR_dC_minus, dX_dC_minus = multiply_by_inverse_jacobian(drdot_dC_minus, dxdot_dC_minus, J_inv, tot, N, M, R)
   dR_dP_plus, dX_dP_plus = multiply_by_inverse_jacobian(drdot_dP_plus, dxdot_dP_plus, J_inv, tot, N, M, R)
@@ -68,10 +68,10 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   grad_G = np.zeros((R,R,M,N))
   
   G_copy = G
-  G_copy[:,:,:,1:] = 0
+  G_copy[:,2,:,1:] = 0
   
   E_copy = E
-  E_copy[:,:,1:] = 0  
+  E_copy[:,2,1:] = 0  
   
   for i in range(R):
     grad_G[i] = de_dr[i,n] * dR_dG[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M,1,1,1)), dX_dG[N+K:,l])
@@ -84,13 +84,14 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1,1,1)),dX_dG[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K,1,1,1)),dX_dG[N:N+K,l]),axis=0)
+
   # special case for i=n     
   grad_G[np.arange(R),np.arange(R),:,n] += de_dg[:,:,n]*dg_dG[:,n,:,n]
   
   # subtract off added term in diagonal for dischargers (for whom G is technically inapplicable)
   if n != 0:
-    grad_G[2,2,:,n] += -de_dg[:,:,n]*dg_dG[:,n,:,n]
+    grad_G[2,:,:,n] += -de_dg[2,:,n]*dg_dG[2,n,:,n]
   
   #special case for e2
   grad_G[1] += de2_de1*grad_G[0]
@@ -110,14 +111,14 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1,1)),dX_dE[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E[N:,i,n],(K,1,1)),dX_dE[N:N+K,l]),axis=0)
         
   # special case for i=n     
   grad_E[np.arange(R),np.arange(R),n] += de_dE[:,n,n]
   
     # subtract off added term in diagonal for dischargers (for whom E is technically inapplicable)
   if n != 0:
-    grad_E[2,2,n] += -de_dE[:,n,n]
+    grad_E[2,2,n] += -de_dE[2,n,n]
   
   #special case for e2
   grad_E[1] += de2_de1*grad_E[0]
@@ -137,7 +138,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K)),dX_dT[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K)),dX_dT[N:N+K,l]),axis=0)
           
   #special case for e2
   grad_T[1] += de2_de1*grad_T[0]
@@ -158,7 +159,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1)),dX_dH[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K,1)),dX_dH[N:N+K,l]),axis=0)
           
   #special case for e2
   grad_H[1] += de2_de1*grad_H[0]
@@ -179,7 +180,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                        # k1ji
                 )
             ,axis=0)  # Sum over k
-        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1)),dX_dC_plus[:N+K,l]),axis=0)
+        ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K,1)),dX_dC_plus[N:N+K,l]),axis=0)
         
     grad_C_minus[i] = de_dr[i,n] * dR_dC_minus[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M,1)), dX_dC_minus[N+K:,l])
                    # scalar                               jxi         # m                             mji
@@ -232,14 +233,25 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   grad_P_plus[1] += de2_de1*grad_P_plus[0]
   
   # average objectives across resources to get an aggregated objective. average is weighted by sigma_tildes, an indication of #importance of each resource to the user
-  grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_G, axis=0)
-  grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_E, axis=0)
-  grad_T_avg = np.sum(sigma_tildes[:,l]*grad_T, axis=0)
-  grad_H_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_H, axis=0)
-  grad_C_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_plus, axis=0)
-  grad_C_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_minus, axis=0)
-  grad_P_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_plus, axis=0)  
-  grad_P_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_minus, axis=0)
+  
+  # TO TEST - CHANGE BACK AFTER
+  grad_G_avg = grad_G[2]
+  grad_E_avg = grad_E[2]
+  grad_T_avg = grad_T[2]
+  grad_H_avg = grad_H[2]
+  grad_C_plus_avg = grad_C_plus[2]
+  grad_C_minus_avg = grad_C_minus[2]
+  grad_P_plus_avg = grad_P_plus[2]  
+  grad_P_minus_avg = grad_P_minus[2]
+  
+  # grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_G, axis=0)
+  # grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_E, axis=0)
+  # grad_T_avg = np.sum(sigma_tildes[:,l]*grad_T, axis=0)
+  # grad_H_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_H, axis=0)
+  # grad_C_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_plus, axis=0)
+  # grad_C_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_minus, axis=0)
+  # grad_P_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_plus, axis=0)  
+  # grad_P_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_minus, axis=0)
 
   grad_C_avg = np.zeros((tot))
   assign_when(grad_C_avg, grad_C_plus_avg, C[l]>=0)
@@ -259,30 +271,53 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
 
 
 @jit(nopython=True)
+# def multiply_by_inverse_jacobian(drdot_dp, dxdot_dp, J_inv, tot, N, M, R):
+  # # shape is the shape of strategy parameter p. 
+  # shape = drdot_dp[0].shape
+  # # dSdot_dp == how steady state changes wrt p, packed into one variable
+
+  # dSdot_dp = np.concatenate((
+                 # drdot_dp,
+                 # dxdot_dp),
+             # axis=0)
+
+  # size = drdot_dp[0].size
+  # strategy_length = np.shape(dSdot_dp)[0] # different for diff strategies, the number of entities that are affected by strategy
+  # dSdot_dp = dSdot_dp.reshape(strategy_length, size)  # this should already be true
+  
+
+  # # do the actual computation
+  # dSS_dp = -J_inv[:,:strategy_length] @ dSdot_dp
+
+  # # unpack
+  # dSS_dp = dSS_dp.reshape((tot+3, *shape))
+  # dR_dp = dSS_dp[:R]
+  # dX_dp = dSS_dp[R:]
+
+  # return dR_dp, dX_dp
+  
 def multiply_by_inverse_jacobian(drdot_dp, dxdot_dp, J_inv, tot, N, M, R):
   # shape is the shape of strategy parameter p. For example, D_jm is (N,M,M).
   shape = drdot_dp[0].shape
   # dSdot_dp == how steady state changes wrt p, packed into one variable
 
-  dSdot_dp = np.concatenate((
-                 drdot_dp,
+  dSdot_dp = np.concatenate(
+                 (drdot_dp,
                  dxdot_dp),
              axis=0)
 
   size = drdot_dp[0].size
-  strategy_length = np.shape(dSdot_dp)[0] # different for diff strategies, the number of entities that are affected by strategy
-  dSdot_dp = dSdot_dp.reshape(strategy_length, size)  # this should already be true
-  
+  dSdot_dp = dSdot_dp.reshape(tot+R, size)  # this should already be true
 
   # do the actual computation
-  dSS_dp = -J_inv[:,:strategy_length] @ dSdot_dp
+  dSS_dp = -J_inv @ dSdot_dp
 
   # unpack
-  dSS_dp = dSS_dp.reshape((tot+3, *shape))
+  dSS_dp = dSS_dp.reshape((tot+R, *shape))
   dR_dp = dSS_dp[:R]
   dX_dp = dSS_dp[R:]
-
   return dR_dp, dX_dp
+  
 """
   dSdot_dW_n = np.concatenate((np.broadcast_to(drdot_dW_n,(1,N,N)),dxdot_dW_n,dydot_dW_n), axis=0)
   dSdot_dW_n = dSdot_dW_n.reshape(T,(N)**2)

@@ -1,0 +1,40 @@
+  cd C:\Users\nmoll\OneDrive\Documents\SJV-gen-modeling
+  run run_gen_model.py
+  run strategy_optimization.py
+  run objective_gradient.py
+  np.random.seed(0)
+  entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
+  N_list=entities['N'].values[:,0]
+  N = len(N_list)
+
+  K_list=entities['K'].values[:,0]
+  K = len(K_list)
+
+  M_list=entities['M'].values[:,0]
+  M = len(M_list)
+
+  tot = N+K+M
+  
+  R = 3
+
+  phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P = set_scale_params(N,M,K,N_list,M_list,K_list,tot,R)
+  
+  ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus = set_fixed_exp_params(N,M,K,N_list,M_list,K_list,tot,R)
+  
+  # step size
+  alpha = 0.001
+
+  # Initialize strategy
+  strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
+  #v = np.zeros((N, len(strategy)) # velocity for gradient descent with momentum
+  tolerance = alpha #
+  max_diff = 1  # arbitrary initial value, List of differences in euclidean distance between strategies in consecutive iterations
+  iterations = 0
+ 
+
+  (drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus) = ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx)
+  
+  objective = 0
+  i = 0
+  new_strategy = grad_descent_constrained(strategy, alpha, objective, i, N, K, M, R, tot,
+        phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)

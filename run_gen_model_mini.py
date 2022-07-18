@@ -21,30 +21,24 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   psi_bars[1] = 1-psis[1]
   #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
   eq_R_ratio = psi_bars[1]/(psi_bars[0]*(phis[0]/phis[1]))
+  entities = np.concatenate([N_list, K_list, M_list])
   
   # 1: DACs
-  # 2: small district farmers
   # 3: investor district farmers
-  # 4: small white area growers
-  # 5: investor white area growers
-  # 6: municipalities
-  # 7: other dischargers
   
   # set up logical arrays to make indexing cleaner
   
   sw_users = np.array([False]*(N+K))
-  sw_users[1:3] = True
-  small_growers = np.array([False]*(N+K))
-  small_growers[[1,3]] = True
+  sw_users[1] = True
+  #small_growers = np.array([False]*(N+K))
+  #small_growers[[1,3]] = True
   
   psi_tildes = np.zeros((3,N)) # 
-  psi_tildes[0,1:3] = np.random.dirichlet([0.3,0.7],1) # sw split
-  psi_tildes[1] = np.random.dirichlet([0.000001,0.05,0.25,0.1,0.4,0.05,0.05],1) # gw split
-  psi_tildes[2,1:N] = [0.07,0.4,0.07,0.4,0.03,0.03] # gw discharge split
+  psi_tildes[0,1] = 1 # sw split
+  psi_tildes[1] = np.random.dirichlet([0.000001,1-0.000001],1) # gw split
+  psi_tildes[2,1] = 1 # gw discharge split
   alphas = np.zeros((1,tot))
-  alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
-  alphas[0,3] = np.random.uniform(0.3,0.6)
-  alphas[0,[2,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
+  alphas[0,:N] = np.random.uniform(0.3,0.6,(2,))
   alphas[0,N:] = np.random.uniform(0.05,0.1,(K+M,))
   beta_tildes = np.zeros([1,tot]) # gain based on resource access in general
   beta_hats = np.zeros([1,tot]) # gain from govt support
@@ -52,21 +46,17 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   beta_bars = np.zeros([1,tot]) # gain from "natural" gain
 
   sigmas_df = pd.read_csv('parameter_files\sigmas.csv')
-  sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
+  sigmas_df.set_index('Unnamed: 0', inplace=True)
+  sigmas_df = sigmas_df[entities].loc[entities]
+  sigma_weights = sigmas_df.fillna(0).values # array of weights for sampling
   sigma_weights = np.array(sigma_weights, dtype=[('O', float)]).astype(float)
   total = np.sum(sigma_weights[:,:N],axis = 0)
   from_ngo = np.sum(sigma_weights[:N+K,:N],axis = 0)
   from_gov = np.sum(sigma_weights[N+K:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
   betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose()
-  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
-  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  
-  beta_params = np.stack([betas_1, betas_2, betas_3, betas_4, betas_5, betas_6, betas_7])
+  betas_2 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
+  beta_params = np.stack([betas_1, betas_2])
   beta_tildes[0,:N] = beta_params[:,0,0]
   fraction = np.where(total==0,0,from_ngo/total)
   betas[0,:N] = beta_params[:,1,0]*fraction
@@ -77,7 +67,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
   sigma_tildes[1,0] = np.random.uniform(0.4,0.6) # salience of gw availability to communities
   sigma_tildes[2,0] = 1 - sigma_tildes[1,0] # salience of gw quality to communities
-  sigma_tildes[0,sw_users] = np.random.uniform(0.1,0.5,(2,)) # reliance of growers w/ sw access on sw
+  sigma_tildes[0,sw_users] = np.random.uniform(0.1,0.5,(np.sum(sw_users),)) # reliance of growers w/ sw access on sw
   sigma_tildes[1,sw_users] = 1-sigma_tildes[0,sw_users] # reliance of growers w/ sw access on gw 
 
   sigmas = np.zeros((N+K,tot)) # sigma_k,n is kxn $
@@ -99,9 +89,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas = np.zeros((N+K,tot))  # lambda_k,n is kxn $
   lambda_hats = np.zeros((M,tot))
   lambdas_df = pd.read_excel('parameter_files\lambdas.xlsx')
-  lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
+  lambdas_df.set_index('Unnamed: 0', inplace=True)
+  lambdas_df = lambdas_df[entities].loc[entities]
+  lambdas_weights = lambdas_df.fillna(0).values # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
-  for i in range(tot): # loop through to fill in each (each column sums to 1)
+  
+  for i in range(tot-1): # loop through to fill in each (each column sums to 1)
     lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
     lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
  
@@ -113,34 +106,38 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   from_gov = np.sum(lambdas_weights[N+K:],axis = 0)
   eta_bars = np.random.uniform(beta_bars[0],0.9,(tot))
   fraction = np.where(total==0,0,from_ngo/total)
+  fraction-0.1*(fraction)
+  fraction+0.1*(fraction)
+  print(np.shape(eta_bars))
+  print(np.shape(fraction))
   etas[0] = np.random.uniform(fraction-0.1*(fraction),fraction+0.1*(fraction))*(1-eta_bars)
   eta_hats[0] = 1 - eta_bars[0] - etas[0]
   
   # effort allocation parameters 
   G = np.zeros((N+K,R,M,N))  # F_i,m,n is ixmxn positive effort for influencing resource extraction governance $
     # get indices
-  EJ_groups = np.nonzero(K_list=='EJ groups')
+  #EJ_groups = np.nonzero(K_list=='EJ groups')
   DACs_idx = np.nonzero(N_list == 'rural communities')
-  growers = np.nonzero(np.any([N_list == 'small growers', N_list =='investor growers', N_list == 'small growers (white area)', N_list =='investor growers (white area)'],axis=0))[0]
+  growers = np.nonzero(np.any([N_list =='investor growers'],axis=0))[0]
   # EJ groups help DACs receive funding for water supply and water
   # treatment infrastructure from the state
-  G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
+  #G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
+  #G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   #G[[1,2]][:,N+EJ_groups[0],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1, (2,1,1))
   # UCCE helps growers get grants from NRCS grants
-  G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
+  #G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))
   G = np.nan_to_num(G)
   
   E = np.zeros((N+K,3,N))
-  E[N+EJ_groups[0],[1,2],DACs_idx] = np.random.uniform(0.5,1, (1,2))
+  #E[N+EJ_groups[0],[1,2],DACs_idx] = np.random.uniform(0.5,1, (1,2))
   E = np.divide(E,np.sum(E,axis=0))
   E = np.nan_to_num(E)
   T = np.zeros(N+K)
-  T[N+np.nonzero(K_list == 'Sustainable conservation')[0]] = np.random.uniform(0.5,1)
-  T = T/np.sum(T)
+  #T[N+np.nonzero(K_list == 'Sustainable conservation')[0]] = np.random.uniform(0.5,1)
+  #T = T/np.sum(T)
   H = np.zeros((N+K,M))  # effort for influencing recharge policy 
-  H[N + np.nonzero(K_list=='Flood-MAR network')[0], np.nonzero(M_list=='Water Rights Division (SWRCB)')[0]] = np.random.uniform(0.3,0.5)
+  #H[N + np.nonzero(K_list=='Flood-MAR network')[0], np.nonzero(M_list=='Water Rights Division (SWRCB)')[0]] = np.random.uniform(0.3,0.5)
   H = np.divide(H,np.sum(H,axis=0))
   H = np.nan_to_num(H)
   C = sigma_weights[:N+K]  # effort for collaboration. C_i,n is ixn 
@@ -150,7 +147,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   
   P = np.zeros((N+K,M,tot))
-  P[EJ_groups,np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1)
+  #P[EJ_groups,np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1)
   P = np.divide(P,np.sum(P,axis=0))
   P = np.nan_to_num(P)
   
@@ -176,52 +173,58 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # ------------------------------------------------------------------------
   
   # 1: DACs
-  # 2: small district farmers
   # 3: investor district farmers
-  # 4: small white area growers
-  # 5: investor white area growers 
-  
-  # TO DO: fix parameterization for water quality!!!
+  entities = np.concatenate([N_list, K_list, M_list])
   sw_users = np.array([False]*(N+K))
-  sw_users[1:3] = True
+  sw_users[1] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
   de_dr = np.zeros((3,N+K))
-  de_dr[0,sw_users] = 1
+  de_dr[0,1] = 1
   de_dr[1,0] = np.random.uniform(1,2)
-  de_dr[1,1] = np.random.uniform(0.5,1.5)
-  de_dr[1,2] = np.random.uniform(0,0.5)
-  de_dr[1,3] = np.random.uniform(1,2)
-  de_dr[1,4] = np.random.uniform(0,0.5)
+  de_dr[1,1] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
   de2_de1 = -1
-  de_dg = np.zeros((3,M,N))  ###### $
+  de_dg = np.zeros((3,M,N))  
   de_dE = np.zeros((3,N+K,N))
   
   # de/dg for surface water
   df = pd.read_excel('parameter_files\de_dg_sw_lower.xlsx') #lower bounds for de_dg for sw
+  df.set_index('Unnamed: 0', inplace=True)
+  Non_RUs = np.concatenate([K_list, M_list]) # combine government and non-government orgs for setting de_dg and de_dE in one shot
+  df = df[N_list].loc[Non_RUs]
   sw_lower = df.fillna(0).values[1:,1:]
   sw_lower = np.array(sw_lower, dtype=[('O', float)]).astype(float)
   df = pd.read_excel('parameter_files\de_dg_sw_upper.xlsx')
+  df.set_index('Unnamed: 0', inplace=True)
+  df = df[N_list].loc[entities]  
   sw_upper = df.fillna(0).values[1:,1:]
   sw_upper = np.array(sw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[0,:,:] = np.random.uniform(sw_lower[-M:], sw_upper[-M:])
   de_dE[0,N:,:] = np.random.uniform(sw_lower[N:N+K], sw_upper[N:N+K])
   # de/dg for groundwater
   df = pd.read_excel('parameter_files\de_dg_gw_lower.xlsx') #lower bounds for de_dg for sw
+  df.set_index('Unnamed: 0', inplace=True)
+  df = df[N_list].loc[entities]
   gw_lower = df.fillna(0).values[1:,1:]
   gw_lower = np.array(gw_lower, dtype=[('O', float)]).astype(float)
   df = pd.read_excel('parameter_files\de_dg_gw_upper.xlsx')
+  df.set_index('Unnamed: 0', inplace=True)
+  df = df[N_list].loc[entities]
   gw_upper = df.fillna(0).values[1:,1:]
   gw_upper = np.array(gw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[1,:,:] = np.random.uniform(gw_lower[-M:], gw_upper[-M:])
-  de_dE[1,N:,:] = np.random.uniform(gw_lower[N:N+K], gw_upper[N:N+K]) 
+  de_dE[1,N:,:] = np.random.uniform(gw_lower[N:N+K], gw_upper[N:N+K])
   # de/dg for groundwater quality
   df = pd.read_excel('parameter_files\de_dg_gwq_lower.xlsx') #lower bounds for de_dg for sw
+  df.set_index('Unnamed: 0', inplace=True)
+  df = df[N_list].loc[entities]
   gwq_lower = df.fillna(0).values[1:,1:]
   gwq_lower = np.array(gwq_lower, dtype=[('O', float)]).astype(float)
   df = pd.read_excel('parameter_files\de_dg_gwq_upper.xlsx')
+  df.set_index('Unnamed: 0', inplace=True)
+  df = df[N_list].loc[entities]
   gwq_upper = df.fillna(0).values[1:,1:]
   gwq_upper = np.array(gwq_upper, dtype=[('O', float)]).astype(float) 
   de_dg[2,:,:] = np.random.uniform(gwq_lower[-M:], gwq_upper[-M:])
@@ -233,32 +236,34 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG = np.random.uniform(0.5,1,(N+K,M,N))  # dg_m,n/(dF_i,m,n * x_i) is ixmxn $
   # get indices for some exceptions
   big_growers_idx = np.nonzero(N_list=='investor growers')
-  IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
-  growers = np.nonzero(np.any([N_list == 'small growers', N_list =='investor growers', N_list == 'small growers (white area)', N_list =='investor growers (white area)'],axis=0))[0]
-  grower_groups = np.nonzero(np.any([K_list == 'Grower advocacy groups', K_list == 'UC Extension/research community', K_list == 'Sustainable conservation', K_list == 'MPEP', K_list == 'PCAs/CCAs'],axis=0))[0]
-  EJ_groups = np.nonzero(K_list=='EJ groups')
+  #IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
+  growers = np.nonzero(np.any([N_list =='investor growers'],axis=0))[0]
+  # grower_groups = np.nonzero(np.any([K_list == 'Grower advocacy groups', K_list == 'UC Extension/research community', K_list == 'Sustainable conservation', K_list == 'MPEP', K_list == 'PCAs/CCAs'],axis=0))[0]
+  #EJ_groups = np.nonzero(K_list=='EJ groups')
   DACs_idx = np.nonzero(N_list == 'rural communities')
   
   dg_dG[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(N)) # big growers have outsized influence on IDs/WDs
-  dg_dG[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.1,(N)) # DACs have essentially no representation on IDs/WD boards
+  #dg_dG[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.1,(N)) # DACs have essentially no representation on IDs/WD boards
   dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
-  dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
-  dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
-  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
+  #dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
+  #dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
+  #dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
   # dg_dG[np.meshgrid(growers,grower_groups)] = np.random.uniform(1,2,(len(grower_groups),len(growers),N))
   # dg_dG[DACs_idx, EJ_groups] = np.random.uniform(1,2,(1,1,N)
   # dg_dG[growers, EJ_groups] = np.random.uniform(0,0.2,(len(growers),1,N))
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
-  dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.05,(1,M))
-  dh_dH[np.nonzero(N_list=='investor growers (white area)')] = np.random.uniform(0,0.1,(1,M))
+  #dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.05,(1,M))
+  #dh_dH[np.nonzero(N_list=='investor growers (white area)')] = np.random.uniform(0,0.1,(1,M))
   
   
   dg_dy = np.random.uniform(0.5,1,(3,M,N)) # 
   dh_dy = np.random.uniform(0.5,1,(M))
   
   data = pd.read_excel('parameter_files\dt_dh.xlsx', sheet_name=None) #lower bounds for de_dg for sw
+  data.set_index('Unnamed: 0', inplace=True)
+  data = data.loc[entities]
   lower = data['lower'].fillna(0).values[:,1:]
   lower = np.array(lower, dtype=[('O', float)]).astype(float)
   upper  = data['lower'].fillna(0).values[:,1:]
@@ -278,12 +283,12 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dc_dC[:N,:] = np.random.uniform(0.5,1,(N,tot))
   indices = np.arange(0,N+K)
   dc_dC[indices,indices] = 0
-  dc_dC[:N+K,N+K+np.nonzero(M_list=='Friant-Kern Canal')[0][0]] = 0
+  #dc_dC[:N+K,N+K+np.nonzero(M_list=='Friant-Kern Canal')[0][0]] = 0
   
   dp_dP = np.zeros((N+K,M,tot))
   # assume that ability to influence g corresponds to ability to influence p as well
-  dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
-  dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
+  #dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
+  #dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
   dp_dy = np.random.uniform(0.5,1,(M,tot))
   du_dx_plus = np.random.uniform(0,1,(tot))
   du_dx_minus = np.random.uniform(1,2,(tot))
@@ -317,15 +322,13 @@ def run_system(user = None):
       final system
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
-  print('c')
-  entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
-  N_list=entities['N'].values[:,0]
+  N_list=['rural communities','investor growers']
   N = len(N_list)
 
-  K_list=entities['K'].values[:,0]
+  K_list=[]
   K = len(K_list)
 
-  M_list=entities['M'].values[:,0]
+  M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)']
   M = len(M_list)
 
   tot = N+K+M
@@ -348,7 +351,7 @@ def run_system(user = None):
     stability_1 = False  # unstable if real part is positive, inconclusive if 0
   
   if user != None:
-    max_iters = 1000 # change back to 100!! 
+    max_iters = 200 # change back to 100!! 
     strategy, stability_2, stability_3, converged, strategy_history, grad_history = optimize_strategy(max_iters, user, N, K, M, tot, R,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
   else:

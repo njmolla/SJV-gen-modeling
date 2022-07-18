@@ -114,8 +114,8 @@ def grad_descent_constrained(initial_point, objective, alpha, i, N, K, M, R, tot
   return the new and improved strategy
   '''
   x = initial_point  # strategy
-  print('')
-  print('strategy:',x[403])
+  #print('')
+  #print('strategy:',x[403])
 
   # calculate how steady state changes with respect to strategy parameters
   dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability\
@@ -126,7 +126,7 @@ def grad_descent_constrained(initial_point, objective, alpha, i, N, K, M, R, tot
   # calculate how objective changes wrt strategy parameters (the gradient)
   grad = objective_grad(x, objective, i, N, K, M, R, tot,
           psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus)
-  print('gradient:',grad[403])
+  #print('gradient:',grad[403])
 
   d = len(x)
   #v[n] = 0.9*v[n] + alpha*grad
@@ -162,10 +162,10 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
   drdot_dG = np.zeros((R,N+K,R,M,N))
   drdot_dG[0,:,0] = -phis[0]*psis[0]*np.multiply(psi_tildes[0].reshape(1,1,N),np.multiply(de_dg[0],dg_dG[0]))
   drdot_dG[1,:,1] = -phis[1]*np.multiply(psi_tildes[1].reshape(1,1,N),np.multiply(de_dg[1],dg_dG[1]))
-  drdot_dG[1,:,0] = -phis[1]*np.multiply(psi_tildes[1].reshape(1,1,N),np.multiply(de_dg[1],dg_dG[1]))
+  drdot_dG[1,:,0] = -phis[1]*de2_de1*np.multiply(psi_tildes[1].reshape(1,1,N),np.multiply(de_dg[0],dg_dG[0]))
   drdot_dG[2,:,2] = phis[1]*np.multiply(psi_tildes[2].reshape(1,1,N),np.multiply(de_dg[2],dg_dG[2])) 
   
-  dxdot_dG = np.zeros([N,N+K,R,M,N])
+  dxdot_dG = np.zeros([N+K+M,N+K,R,M,N])
 #  for i in range(N):
 #    dxdot_dF[i,:,:,i] = alphas[0,i]*betas[0,i]*db_de[0,i]*de_dg[0,:,i]*dg_dG[:,:,i]
   dxdot_dG[np.arange(0,N),:,0,:,np.arange(0,N)] = np.transpose(np.multiply(
@@ -200,7 +200,7 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
   drdot_dE[1,:,0] = (-phis[1]*psi_tildes[1])[np.newaxis]*de2_de1*de_dE[0,:,:]
   drdot_dE[2,:,2] = (phis[1]*psi_tildes[2])[np.newaxis]*de_dE[2,:,:]
   
-  dxdot_dE = np.zeros((N,N+K,R,N))
+  dxdot_dE = np.zeros((N+K+M,N+K,R,N))
   dxdot_dE[np.arange(0,N),:,0,np.arange(0,N)] = np.transpose(np.multiply(
              #n k m (gets rid of last index)
         np.reshape(alphas[0,:N]*beta_tildes[0,:N]*(sigma_tildes[0,:N]*db_de[0,:N] + sigma_tildes[1,:N]*db_de[1,:N]*de2_de1), 
@@ -221,25 +221,25 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
       ))      
  
   # For strategy H (recharge policy)
-  drdot_dH = np.zeros((3,N+K,M))
+  drdot_dH = np.zeros((R,N+K,M))
   drdot_dH[0] = -phis[0]*psi_bars[0]*np.multiply(np.transpose(dt_dh), dh_dH)
   drdot_dH[1] = phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
-  print('drdot/dH:', drdot_dH[1,0,3])
+  #print('drdot/dH:', drdot_dH[1,0,3])
   drdot_dH[2] = -phis[1]*psi_bars[1]*np.multiply(np.transpose(dt_dh), dh_dH)
   
-  dxdot_dH = np.zeros((N,N+K,M))
+  dxdot_dH = np.zeros((N+K+M,N+K,M))
   
   # For strategy T (directly influence recharge)
-  drdot_dT = np.zeros((3,N+K))
+  drdot_dT = np.zeros((R,N+K))
   drdot_dT[0] = -phis[0]*psi_bars[0]*dt_dT
   drdot_dT[1] = phis[1]*psi_bars[1]*dt_dT
   drdot_dT[2] = -phis[1]*psi_bars[1]*dt_dT
   
-  dxdot_dT = np.zeros((N,N+K))
+  dxdot_dT = np.zeros((N+K+M,N+K))
 
   # For strategy C
-  drdot_dC_plus = np.zeros((3,N+K,tot))
-  drdot_dC_minus = np.zeros((3,N+K,tot))
+  drdot_dC_plus = np.zeros((R,N+K,tot))
+  drdot_dC_minus = np.zeros((R,N+K,tot))
   # dxdot_n/dC_k,i is nxkxi
   dxdot_dC_plus = np.zeros((tot,N+K,tot))
   dxdot_dC_plus[np.arange(0,tot),:,np.arange(0,tot)] =  np.transpose(np.multiply(alphas*betas,np.multiply(sigmas,dc_dC)))
@@ -248,8 +248,8 @@ def ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, 
   dxdot_dC_minus[np.arange(0,tot),:,np.arange(0,tot)] =  np.transpose(np.multiply(alphas*etas,np.multiply(lambdas,dc_dC)))
 
   # For strategy P
-  drdot_dP_plus = np.zeros((3,N+K,M,tot))
-  drdot_dP_minus = np.zeros((3,N+K,M,tot))
+  drdot_dP_plus = np.zeros((R,N+K,M,tot))
+  drdot_dP_minus = np.zeros((R,N+K,M,tot))
   dxdot_dP_plus = np.zeros((tot,N+K,M,tot))
   dxdot_dP_plus[np.arange(0,tot),:,:,np.arange(0,tot)] = np.transpose(np.multiply(alphas*beta_hats,np.multiply(sigma_hats,dp_dP)),(2,0,1))
   
@@ -278,12 +278,11 @@ def optimize_strategy(max_iters, i, N, K, M, tot, R,
   # Initialize strategy
   strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
   #v = np.zeros((N, len(strategy)) # velocity for gradient descent with momentum
-  tolerance = 0.001 #
   max_diff = 1  # arbitrary initial value, List of differences in euclidean distance between strategies in consecutive iterations
   iterations = 0
   objective = i # this isn't the case for non-resource users
-  alpha = 0.01
-
+  alpha = 0.0001
+  tolerance = alpha/10 #
   
   #things to keep track of
   stability_history = np.zeros(max_iters)
@@ -336,4 +335,4 @@ def optimize_strategy(max_iters, i, N, K, M, tot, R,
   stability_3 = np.all(stability_history[1:]==True)
     
 
-  return strategy, stability_2, stability_3, converged, strategy_history, grad_history
+  return strategy, stability_2, stability_3, converged, np.array(strategy_history), grad_history
