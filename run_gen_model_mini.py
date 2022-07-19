@@ -108,8 +108,6 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   fraction = np.where(total==0,0,from_ngo/total)
   fraction-0.1*(fraction)
   fraction+0.1*(fraction)
-  print(np.shape(eta_bars))
-  print(np.shape(fraction))
   etas[0] = np.random.uniform(fraction-0.1*(fraction),fraction+0.1*(fraction))*(1-eta_bars)
   eta_hats[0] = 1 - eta_bars[0] - etas[0]
   
@@ -121,9 +119,9 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   growers = np.nonzero(np.any([N_list =='investor growers'],axis=0))[0]
   # EJ groups help DACs receive funding for water supply and water
   # treatment infrastructure from the state
-  #G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  #G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  #G[[1,2]][:,N+EJ_groups[0],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1, (2,1,1))
+  G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
+  G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
+  G[[1,2]][:,N+EJ_groups[0],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1, (2,1,1))
   # UCCE helps growers get grants from NRCS grants
   #G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))
@@ -236,21 +234,21 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG = np.random.uniform(0.5,1,(N+K,M,N))  # dg_m,n/(dF_i,m,n * x_i) is ixmxn $
   # get indices for some exceptions
   big_growers_idx = np.nonzero(N_list=='investor growers')
-  #IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
+  IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
   growers = np.nonzero(np.any([N_list =='investor growers'],axis=0))[0]
   # grower_groups = np.nonzero(np.any([K_list == 'Grower advocacy groups', K_list == 'UC Extension/research community', K_list == 'Sustainable conservation', K_list == 'MPEP', K_list == 'PCAs/CCAs'],axis=0))[0]
-  #EJ_groups = np.nonzero(K_list=='EJ groups')
+  EJ_groups = np.nonzero(K_list=='EJ groups')
   DACs_idx = np.nonzero(N_list == 'rural communities')
   
-  #dg_dG[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(N)) # big growers have outsized influence on IDs/WDs
-  #dg_dG[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.1,(N)) # DACs have essentially no representation on IDs/WD boards
+  dg_dG[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(N)) # big growers have outsized influence on IDs/WDs
+  dg_dG[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.1,(N)) # DACs have essentially no representation on IDs/WD boards
   dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
-  #dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
-  #dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
-  #dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
+  dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
+  dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
+  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
   # dg_dG[np.meshgrid(growers,grower_groups)] = np.random.uniform(1,2,(len(grower_groups),len(growers),N))
-  # dg_dG[DACs_idx, EJ_groups] = np.random.uniform(1,2,(1,1,N)
-  # dg_dG[growers, EJ_groups] = np.random.uniform(0,0.2,(len(growers),1,N))
+  dg_dG[DACs_idx, EJ_groups] = np.random.uniform(1,2,(1,1,N)
+  dg_dG[growers, EJ_groups] = np.random.uniform(0,0.2,(len(growers),1,N))
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
@@ -291,8 +289,8 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   
   dp_dP = np.zeros((N+K,M,tot))
   # assume that ability to influence g corresponds to ability to influence p as well
-  #dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
-  #dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
+  dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
+  dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
   dp_dy = np.random.uniform(0.5,1,(M,tot))
   du_dx_plus = np.random.uniform(0,1,(tot))
   du_dx_minus = np.random.uniform(1,2,(tot))
@@ -329,10 +327,10 @@ def run_system(user = None):
   N_list=['rural communities','investor growers']
   N = len(N_list)
 
-  K_list=[]
+  K_list=['EJ groups']
   K = len(K_list)
 
-  M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)']
+  M_list=['Bureau of Reclamation','Friant Water Authority','Friant-Kern Canal','Irrigation/water districts','DWR','Water Rights Division (SWRCB)','Financial Assistance (SWRCB)','Drinking Water Division (SWRCB)','Division of Water Quality (SWRCB)','NRCS','County Board of Supervisors','Local Water Boards','CV SALTS management zones','central valley water board','water quality coalitions','CDFA','RCDs','Regional water management groups']
   M = len(M_list)
 
   tot = N+K+M

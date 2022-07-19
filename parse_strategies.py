@@ -16,10 +16,10 @@ R_list = ['surface water', 'groundwater', 'groundwater quality']
 N_list=['rural communities','investor growers']
 N = len(N_list)
 
-K_list=[]
+K_list=['EJ groups']
 K = len(K_list)
 
-M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)']
+M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)','County Board of Supervisors','Local Water Boards','CV SALTS management zones']
 
 N = len(N_list)
 K = len(K_list)
