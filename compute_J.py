@@ -24,7 +24,7 @@ def compute_Jacobian(N,K,M,tot,
   # dr•/dx (1x(N+K))
   # For the NxMxN stuff: i = axis 0, m = axis 1, n = axis 2
   J[0,3:N+K+3] = phis[0] * (-psis[0]*
-        np.sum(psi_tildes[0,:][np.newaxis]*(de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),axis=1))) 
+        np.sum(psi_tildes[0,:][np.newaxis]*(de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),axis=1)),axis = 1) 
         - psi_bars[0] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
         
   J[1,3:N+K+3] = phis[1]*(np.multiply(psi_bars[1], dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)) - np.sum(

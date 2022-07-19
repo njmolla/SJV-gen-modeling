@@ -6,5 +6,22 @@ weird_strategies = np.any([strategies[:,301]<0, strategies[:,405]<0, strategies[
 data = np.concatenate((converged[:,np,newaxis],stabilities),axis=1)
 df = pd.DataFrame(data, columns=['Converged?', 'Initial stability', 'pre-optimization stability', 'stability throughout optimization', 'final'])
 all_stable = np.all(stabilities==[1,1,1,1],axis=1)
-
+plt.plot(np.transpose(strategies[all_stable,abs(np.sum(strategies,axis=0))>1e-5]),'.')
+s_6 = np.all(stabilities==[1,1,0,1],axis=1)
+list = plt.plot(np.transpose(strategies[s_6][:,abs(np.sum(strategies[s_6],axis=0))>1e-5]),'.')
 301, 405, 430
+
+
+array([[0., 0., 0., 0.],
+       [0., 1., 0., 0.],
+       [0., 1., 0., 1.],
+       [0., 1., 1., 1.],
+       [1., 1., 0., 0.],
+       [1., 1., 0., 1.],
+       [1., 1., 1., 1.]])
+       
+array([43, 13, 45,  2,  3, 51, 43], dtype=int64)
+
+1101 and 1111, 1100, 0111, 0100 are similar
+
+# 0101 and all unstable are weirdest
