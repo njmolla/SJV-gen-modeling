@@ -31,15 +31,15 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   # set up logical arrays to make indexing cleaner
   
-  sw_users = np.array([False]*(N+K))
+  sw_users = np.array([False]*(N))
   sw_users[1:3] = True
-  small_growers = np.array([False]*(N+K))
+  small_growers = np.array([False]*(N))
   small_growers[[1,3]] = True
   
   psi_tildes = np.zeros((3,N)) # 
   psi_tildes[0,1:3] = np.random.dirichlet([0.3,0.7],1) # sw split
   psi_tildes[1] = np.random.dirichlet([0.000001,0.05,0.25,0.1,0.4,0.05,0.05],1) # gw split
-  psi_tildes[2,1:N] = [0.07,0.4,0.07,0.4,0.03,0.03] # gw discharge split
+  psi_tildes[2,1:N] = np.random.dirichlet([0.07,0.4,0.07,0.4,0.03,0.03]) # gw discharge split
   alphas = np.zeros((1,tot))
   alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
   alphas[0,3] = np.random.uniform(0.3,0.6)
@@ -244,9 +244,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
   dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
   dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
-  # dg_dG[np.meshgrid(growers,grower_groups)] = np.random.uniform(1,2,(len(grower_groups),len(growers),N))
-  # dg_dG[DACs_idx, EJ_groups] = np.random.uniform(1,2,(1,1,N)
-  # dg_dG[growers, EJ_groups] = np.random.uniform(0,0.2,(len(growers),1,N))
+
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
