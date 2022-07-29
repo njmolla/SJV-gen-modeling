@@ -31,7 +31,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   # set up logical arrays to make indexing cleaner
   
-  sw_users = np.array([False]*(N))
+  sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   small_growers = np.array([False]*(N))
   small_growers[[1,3]] = True
@@ -180,11 +180,11 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # 4: small white area growers
   # 5: investor white area growers 
   
-  # TO DO: fix parameterization for water quality!!!
   sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
+  ds_dr[1] = -1 # trying this out #######################################################################################################
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)
@@ -206,7 +206,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   sw_upper = df.fillna(0).values[:,1:]
   sw_upper = np.array(sw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[0,:,:] = np.random.uniform(sw_lower[-M:], sw_upper[-M:])
-  de_dE[0,N:,:] = np.random.uniform(sw_lower[N:N+K], sw_upper[N:N+K])
+  de_dE[0,N:,:] = np.random.uniform(sw_lower[:K], sw_upper[:K])
   # de/dg for groundwater
   df = pd.read_excel('parameter_files\\base\de_dg_gw_lower.xlsx') #lower bounds for de_dg for sw
   gw_lower = df.fillna(0).values[:,1:]
@@ -215,7 +215,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   gw_upper = df.fillna(0).values[:,1:]
   gw_upper = np.array(gw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[1,:,:] = np.random.uniform(gw_lower[-M:], gw_upper[-M:])
-  de_dE[1,N:,:] = np.random.uniform(gw_lower[N:N+K], gw_upper[N:N+K]) 
+  de_dE[1,N:,:] = np.random.uniform(gw_lower[:K], gw_upper[:K]) 
   # de/dg for groundwater quality
   df = pd.read_excel('parameter_files\\base\de_dg_gwq_lower.xlsx') #lower bounds for de_dg for sw
   gwq_lower = df.fillna(0).values[:,1:]
@@ -224,7 +224,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   gwq_upper = df.fillna(0).values[:,1:]
   gwq_upper = np.array(gwq_upper, dtype=[('O', float)]).astype(float) 
   de_dg[2,:,:] = np.random.uniform(gwq_lower[-M:], gwq_upper[-M:])
-  de_dE[2,N:,:] = np.random.uniform(gwq_lower[N:N+K], gwq_upper[N:N+K])
+  de_dE[2,N:,:] = np.random.uniform(gwq_lower[:K], gwq_upper[:K])
   # make sure RUs cannot use E as a strategy
   de_dE[:,:N,:] = np.zeros((3,N,N))
   
@@ -243,7 +243,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
   dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
   dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
-  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
+  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
 
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   

@@ -4,22 +4,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# entities = pd.read_excel('parameter_files\\base\entity_list.xlsx',sheet_name=None, header=None)
-# N_list=entities['N'].values[:,0]
+entities = pd.read_excel('parameter_files\\base\entity_list.xlsx',sheet_name=None, header=None)
+N_list=entities['N'].values[:,0]
 
-# K_list=entities['K'].values[:,0]
+K_list=entities['K'].values[:,0]
 
-# M_list=entities['M'].values[:,0]
+M_list=entities['M'].values[:,0]
 
 R_list = ['surface water', 'groundwater', 'groundwater quality']
 
-N_list=['rural communities','investor growers']
-N = len(N_list)
+# N_list=['rural communities','investor growers']
+# N = len(N_list)
 
-K_list=['EJ groups']
-K = len(K_list)
+# K_list=['EJ groups']
+# K = len(K_list)
 
-M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)','County Board of Supervisors','Local Water Boards','CV SALTS management zones']
+# M_list=['Water Rights Division (SWRCB)','Drinking Water Division (SWRCB)','County Board of Supervisors','Local Water Boards','CV SALTS management zones']
 
 N = len(N_list)
 K = len(K_list)
@@ -28,12 +28,12 @@ M = len(M_list)
 R = 3
 
 tot = N+K+M
-resource_user = 'rural communities'
-#resource_user = 'small growers'
+#resource_user = 'rural communities'
+resource_user = 'small growers'
 #resource_user = 'investor growers'
 #resource_user = 'investor growers (white area)'
 
-with open('strategies_%s_looping_mini'%(resource_user), 'rb') as f:
+with open('strategies_%s_looping'%(resource_user), 'rb') as f:
   strategies = pickle.load(f) 
 
 strategies = np.array(strategies)
@@ -46,7 +46,7 @@ strategies_binary[np.abs(strategies)<1e-3] = 0
 unique_strategies, counts = np.unique(strategies_binary, axis=0, return_counts = True)
 
 def translate_strategies(strategy):
-  #strategy[np.abs(strategy)<0.01] = 0 # do this again in case we're translating an individual strategy
+  strategy[np.abs(strategy)<0.01] = 0 # do this again in case we're translating an individual strategy
   translation = [] # list of actions within each strategy
   G = strategy[0:R*M*N].reshape((R,M,N)) # affect extraction policy (for particular actor)
   H = strategy[R*M*N + R*N + 1:R*M*N + R*N + 1 + M] # affect recharge policy

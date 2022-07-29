@@ -40,7 +40,7 @@ def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
   dR_dC_minus, dX_dC_minus = multiply_by_inverse_jacobian(drdot_dC_minus, dxdot_dC_minus, J_inv, tot, N, M, R)
   dR_dP_plus, dX_dP_plus = multiply_by_inverse_jacobian(drdot_dP_plus, dxdot_dP_plus, J_inv, tot, N, M, R)
   dR_dP_minus, dX_dP_minus = multiply_by_inverse_jacobian(drdot_dP_minus, dxdot_dP_minus, J_inv, tot, N, M, R)
-  return dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability
+  return dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability, G, E, T, H, C, P
 
 #@jit(nopython=True)
 def objective_grad(strategy, n, l, N, K, M, R, tot,
@@ -235,23 +235,23 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   # average objectives across resources to get an aggregated objective. average is weighted by sigma_tildes, an indication of #importance of each resource to the user
   
   # TO TEST - CHANGE BACK AFTER
-  grad_G_avg = grad_G[2]
-  grad_E_avg = grad_E[2]
-  grad_T_avg = grad_T[2]
-  grad_H_avg = grad_H[2]
-  grad_C_plus_avg = grad_C_plus[2]
-  grad_C_minus_avg = grad_C_minus[2]
-  grad_P_plus_avg = grad_P_plus[2]  
-  grad_P_minus_avg = grad_P_minus[2]
+  # grad_G_avg = grad_G[2]
+  # grad_E_avg = grad_E[2]
+  # grad_T_avg = grad_T[2]
+  # grad_H_avg = grad_H[2]
+  # grad_C_plus_avg = grad_C_plus[2]
+  # grad_C_minus_avg = grad_C_minus[2]
+  # grad_P_plus_avg = grad_P_plus[2]  
+  # grad_P_minus_avg = grad_P_minus[2]
   
-  # grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_G, axis=0)
-  # grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_E, axis=0)
-  # grad_T_avg = np.sum(sigma_tildes[:,l]*grad_T, axis=0)
-  # grad_H_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_H, axis=0)
-  # grad_C_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_plus, axis=0)
-  # grad_C_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_minus, axis=0)
-  # grad_P_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_plus, axis=0)  
-  # grad_P_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_minus, axis=0)
+  grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis,np.newaxis]*grad_G, axis=0)
+  grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_E, axis=0)
+  grad_T_avg = np.sum(sigma_tildes[:,l]*grad_T, axis=0)
+  grad_H_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_H, axis=0)
+  grad_C_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_plus, axis=0)
+  grad_C_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis]*grad_C_minus, axis=0)
+  grad_P_plus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_plus, axis=0)  
+  grad_P_minus_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_P_minus, axis=0)
 
   grad_C_avg = np.zeros((tot))
   assign_when(grad_C_avg, grad_C_plus_avg, C[l]>=0)
@@ -270,7 +270,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                          grad_P_avg.flatten()))
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 # def multiply_by_inverse_jacobian(drdot_dp, dxdot_dp, J_inv, tot, N, M, R):
   # # shape is the shape of strategy parameter p. 
   # shape = drdot_dp[0].shape

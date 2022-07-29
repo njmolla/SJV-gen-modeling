@@ -1,4 +1,4 @@
-from run_gen_model_mini import run_system
+from run_gen_model import run_system
 import numpy as np
 #from mpi4py import MPI
 import pickle
@@ -8,8 +8,9 @@ num_samples = 200
 #strategies = np.zeros((num_samples,1064))
 strategies = []
 stabilities = np.zeros((num_samples,4))
-resource_user_key = 'rural communities'
-#resource_user_key = 'small growers'
+#resource_user_key = 'rural communities'
+resource_user_key = 'small growers'
+print(resource_user_key)
 #resource_user_key = 'investor growers'
 #resource_user_key = 'investor growers (white area)'
 entities_list = pd.read_excel('parameter_files\\base\entity_list.xlsx',sheet_name=None, header=None)
@@ -31,10 +32,10 @@ for i in range(num_samples):
 
 strategies = np.array(strategies)  
 seed = 'looping'
-with open('strategies_%s_%s_mini'%(resource_user_key,seed), 'wb') as f:
+with open('strategies_%s_%s'%(resource_user_key,seed), 'wb') as f:
   pickle.dump(strategies, f)
 
-with open('stabilities_%s_%s_mini'%(resource_user_key,seed), 'wb') as f:
+with open('stabilities_%s_%s'%(resource_user_key,seed), 'wb') as f:
   pickle.dump(stabilities, f)
   
 

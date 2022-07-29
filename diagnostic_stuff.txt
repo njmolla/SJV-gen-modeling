@@ -2,27 +2,38 @@ import pandas as pd
 
 strategies_sum = np.sum(abs(strategies),axis=1)
 converged = strategies_sum >= 1 # need to check whether this is true
-weird_strategies = np.any([strategies[:,301]<0, strategies[:,405]<0, strategies[:,430]<0], axis=0)
+
 data = np.concatenate((converged[:,np.newaxis],stabilities),axis=1)
 df = pd.DataFrame(data, columns=['Converged?', 'Initial stability', 'pre-optimization stability', 'stability throughout optimization', 'final'])
+
+weird_strategies = np.any([strategies[:,22]<0, strategies[:,23]>0, strategies[:,36]<0, strategies[:,37]>0], axis=0)
 all_stable = np.all(stabilities==[1,1,1,1],axis=1)
+np.all([weird_strategies,all_stable],axis=0)
 
 s_6 = np.all(stabilities==[1,1,0,1],axis=1)
 list = plt.plot(np.transpose(strategies[s_6][:,abs(np.sum(strategies[s_6],axis=0))>1e-5]),'.')
 301, 405, 430
 
+# make it easier to see signs of strategies
+strategies = np.array(strategies)
+strategies_binary = np.zeros(np.shape(strategies))
+strategies_binary[strategies < 0] = -1
+strategies_binary[strategies > 0] = 1
+strategies_binary[np.abs(strategies)<1e-3] = 0
+
+list = plt.plot(np.transpose(strategies_binary[all_stable][:,abs(np.sum(strategies_binary[all_stable],axis=0))>1e-5]),'.')
+
+np.nonzero(np.any(strategies<0, axis=0))
+
+non_zero_strategies = abs(np.sum(strategies[all_stable],axis=0))>1e-5
+# plot just non-zero actions
+
+
 stability_types, counts = np.unique(stabilities, axis=0, return_counts = True)
 
-array([[0., 0., 0., 0.],
-       [0., 1., 0., 0.],
-       [0., 1., 0., 1.],
-       [0., 1., 1., 1.],
-       [1., 1., 0., 0.],
-       [1., 1., 0., 1.],
-       [1., 1., 1., 1.]])
-       
-array([43, 13, 45,  2,  3, 51, 43], dtype=int64)
+(drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus) = ODE_gradient(N, K, M, tot, R, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
 
-1101 and 1111, 1100, 0111, 0100 are similar
-
-# 0101 and all unstable are weirdest
+strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
+dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability\
+  = steady_state_gradient(strategy, objective, i, N, K, M, R, tot,
+          phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
