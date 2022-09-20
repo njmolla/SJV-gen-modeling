@@ -1,5 +1,5 @@
 import numpy as np
-#from numba import jit
+from numba import jit
 
 
 #@jit(nopython=True)
@@ -24,42 +24,42 @@ def compute_Jacobian(N,K,M,tot,
   # dr•/dx (1x(N+K))
   # For the NxMxN stuff: i = axis 0, m = axis 1, n = axis 2
   J[0,3:N+K+3] = phis[0] * (-psis[0]*
-        np.sum(psi_tildes[0,:][np.newaxis]*(de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),axis=1)),axis = 1) 
+        np.sum(np.expand_dims(psi_tildes[0,:],axis=0)*(de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),axis=1)),axis = 1) 
         - psi_bars[0] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
         
   J[1,3:N+K+3] = phis[1]*(np.multiply(psi_bars[1], dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)) - np.sum(
-  psi_tildes[1,:][np.newaxis] * de2_de1 * (de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),
+  np.expand_dims(psi_tildes[1,:],axis=0) * de2_de1 * (de_dE[0]*E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0] * G[:,0]),
   axis=1) + de_dE[1]*E[:,1] + np.sum(np.multiply(de_dg[1], dg_dG[1] * G[:,1]),axis=1)), axis=1))
   
-  J[2,3:N+K+3] = phis[1]*(np.sum(psi_tildes[2,:][np.newaxis]*(de_dE[2]*E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2] * G[:,2]),axis=1)), axis=1) - psi_bars[1] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
+  J[2,3:N+K+3] = phis[1]*(np.sum(np.expand_dims(psi_tildes[2,:],axis=0)*(de_dE[2]*E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2] * G[:,2]),axis=1)), axis=1) - psi_bars[1] * (dt_dT * T + np.sum(np.multiply(np.transpose(dt_dh), dh_dH * H), axis = 1)))
   
  
 
   # dr•/dy
   J[0,N+K+3:] = phis[0] * (-psis[0] * np.sum(
-        np.multiply(psi_tildes[0][np.newaxis], de_dg[0] * dg_dy[0]),                  # 1xn             1xmxn     mxn
-       axis = 1) - (psi_bars[0]*dt_dh*dh_dy[:,np.newaxis])[:,0])
+        np.multiply(np.expand_dims(psi_tildes[0,:N],axis=0), de_dg[0] * dg_dy[0]),                  # 1xn             1xmxn     mxn
+       axis = 1) - (psi_bars[0]*dt_dh*np.expand_dims(dh_dy, axis=1))[:,0])
        
-  J[1,N+K+3:] = phis[1] * ((psi_bars[1]*dt_dh*np.transpose(dh_dy[np.newaxis]))[:,0] - np.sum(
-        np.multiply(psi_tildes[1,:N][np.newaxis], np.multiply(de2_de1, de_dg[0] * dg_dy[0])  + de_dg[1]*dg_dy[1]),                 # 1xn             1xmxn     mxn
+  J[1,N+K+3:] = phis[1] * ((psi_bars[1]*dt_dh*np.expand_dims(dh_dy, axis=1))[:,0] - np.sum(
+        np.multiply(np.expand_dims(psi_tildes[1,:N],axis=0), np.multiply(de2_de1, de_dg[0] * dg_dy[0])  + de_dg[1]*dg_dy[1]),                 # 1xn             1xmxn     mxn
        axis = 1))
        
   J[2,N+K+3:] = phis[1] * (np.sum(
-        np.multiply(psi_tildes[2,:N][np.newaxis],de_dg[2] * dg_dy[2]), axis = 1) - (psi_bars[1]*dt_dh*np.transpose(dh_dy[np.newaxis]))[:,0])                 # 1xn             1xmxn     mxn
+        np.multiply(np.expand_dims(psi_tildes[2,:N],axis=0),de_dg[2] * dg_dy[2]), axis = 1) - (psi_bars[1]*dt_dh*np.expand_dims(dh_dy, axis=1))[:,0])                 # 1xn             1xmxn     mxn
 
   # dx•/dr
-  J[3:N+K+3,0] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[0]*db_de[0]*de_dr[0] + beta_tildes[0,:-M]*sigma_tildes[1]*db_de[1]*de2_de1*de_dr[0])
-  J[3:N+K+3,1] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[1]*db_de[1]*de_dr[1])
-  J[3:N+K+3,2] = alphas[0,:-M] * (beta_tildes[0,:-M]*sigma_tildes[2]*db_de[2]*de_dr[2])
+  J[3:N+3,0] = alphas[0,:N] * (beta_tildes[0,:N]*sigma_tildes[0]*db_de[0,:N]*de_dr[0,:N])+ beta_tildes[0,:N]*sigma_tildes[1]*db_de[1,:N]*de2_de1*de_dr[0,:N]
+  J[3:N+3,1] = alphas[0,:N] * (beta_tildes[0,:N]*sigma_tildes[1]*db_de[1,:N]*de_dr[1,:N])
+  J[3:N+3,2] = alphas[0,:N] * (beta_tildes[0,:N]*sigma_tildes[2]*db_de[2,:N]*de_dr[2,:N])
                                            # 1xn
   # dx•/dx for n != i (NxN+K)
 
   J[3:N+3,3:N+K+3] = np.transpose(np.multiply(alphas[0,np.newaxis,:N],
-        np.multiply((beta_tildes[0,:N]*sigma_tildes[0,:N]*db_de[0,:N])[np.newaxis],       de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0]*G[:,0]), axis = 1))
+        np.multiply(np.expand_dims(beta_tildes[0,:N]*sigma_tildes[0,:N]*db_de[0,:N], axis = 0),       de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0], dg_dG[0]*G[:,0]), axis = 1))
                      #  1xn                                ixmxn
-        + np.multiply((beta_tildes[0,:N]*sigma_tildes[1,:N]*db_de[1,:N])[np.newaxis],       de_dE[1] * E[:,1] + np.sum(np.multiply(de_dg[1], dg_dG[1]*G[:,1]), axis = 1) + np.multiply(de2_de1,de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0],dg_dG[0]*G[:,0]),axis=1)))
+        + np.multiply(np.expand_dims(beta_tildes[0,:N]*sigma_tildes[1,:N]*db_de[1,:N], axis=0),       de_dE[1] * E[:,1] + np.sum(np.multiply(de_dg[1], dg_dG[1]*G[:,1]), axis = 1) + np.multiply(de2_de1,de_dE[0] * E[:,0] + np.sum(np.multiply(de_dg[0],dg_dG[0]*G[:,0]),axis=1)))
         
-        + np.multiply((beta_tildes[0,:N]*sigma_tildes[2,:N]*db_de[2,:N])[np.newaxis], de_dE[2] * E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2]*G[:,2]), axis = 1))
+        + np.multiply(np.expand_dims(beta_tildes[0,:N]*sigma_tildes[2,:N]*db_de[2,:N], axis=0), de_dE[2] * E[:,2] + np.sum(np.multiply(de_dg[2], dg_dG[2]*G[:,2]), axis = 1))
 
       ))
       
@@ -88,7 +88,7 @@ def compute_Jacobian(N,K,M,tot,
     J[i+3,i+3] = alphas[0,i] * (
                      beta_tildes[0,i]* sigma_tildes[0,i] * db_de[0,i] * np.sum(de_dg[0,:,i] * dg_dG[0,i,:,i] * G[i,0,:,i])
                    + beta_tildes[0,i]* sigma_tildes[1,i] * db_de[1,i] * np.sum(de_dg[1,:,i] * dg_dG[1,i,:,i] * G[i,1,:,i])
-                   + de2_de1 * np.sum(de_dg[0,:,i] * dg_dG[0,i,:,i] * G[i,0,:,i])
+                   + de2_de1[i] * np.sum(de_dg[0,:,i] * dg_dG[0,i,:,i] * G[i,0,:,i])
                    + beta_tildes[0,i]* sigma_tildes[2,i] * db_de[2,i] * np.sum(de_dg[2,:,i] * dg_dG[2,i,:,i] * G[i,2,:,i])
                    + beta_hats[0,i] * np.sum(sigma_hats[:,i]*dp_dP[i,:,i]*P_plus[i,:,i]) - eta_hats[0,i] * np.sum(lambda_hats[:,i]*dp_dP[i,:,i]*P_minus[i,:,i])
                    + beta_bars[0,i] * du_dx_plus[i]

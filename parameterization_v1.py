@@ -3,33 +3,34 @@ import networkx as nx
 import pandas as pd
 from compute_J import compute_Jacobian
 from strategy_optimization import optimize_strategy
+from pathlib import Path
+
 
 ''' 
 Summary of changes from base parameterization:
- - increase proportion of surface water that is extracted -> TO DO
+ - increase proportion of surface water that is extracted x
  - state supports rather than limits extraction of surface water x
  - all growers can access surface water
  - IDs have increased power over sw access for growers x
  - gw quality regulations are gone x
 '''
-
 def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   '''
   Outputs:
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = 1 # sw
-  phis[1] = np.random.uniform(0.001,0.004,(1,)) #gw
+  phis[0] = 0.94 #1 # sw
+  phis[1] = np.random.uniform(0.11,0.13,(1,)) #gw
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.3,0.5,(1,)) #sw
-  psis[1] = np.random.uniform(0.01,0.02,(1,)) #gw
-  psi_bars = np.zeros(2) 
+  psis[0] = np.random.uniform(0.93,0.98,(1,)) #sw
+  psis[1] = np.random.uniform(0.8,0.9,(1,)) #gw
+  psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
   psi_bars[1] = 1-psis[1]
   #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
-  eq_R_ratio = psi_bars[1]/(psi_bars[0]*(phis[0]/phis[1]))
-  
+  eq_R_ratio = (psi_bars[1]/psi_bars[0])*(phis[1]/phis[0])
+
   # 1: DACs
   # 2: small district farmers
   # 3: investor district farmers
@@ -42,13 +43,19 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   sw_users = np.array([False]*(N+K))
   sw_users[1:5] = True
-  
-  small_growers = np.array([False]*(N+K))
+  small_growers = np.array([False]*(N))
   small_growers[[1,3]] = True
+  # TO DO: fix sampling of parameters that should sum to 1
   psi_tildes = np.zeros((3,N)) # 
-  psi_tildes[0,sw_users] = np.random.dirichlet([0.15,0.35,0.15,0.35],1) # sw split
-  psi_tildes[1] = np.random.dirichlet([1e-5,0.05,0.4,0.05,0.4,0.05,0.05],1) # gw split
-  psi_tildes[2,1:N] = [0.07,0.4,0.07,0.4,0.03,0.03] # gw discharge split
+  psi_tildes[0,np.nonzero(sw_users)] = np.array([0.15,0.35,0.15,0.35]) # sw split
+  weights = np.array([1,5,25,10,60,1,1]) # gw split
+  psi_tildes[1] = weights/(np.sum(weights)) 
+  weights = np.array([0.07,0.4,0.07,0.4,0.03,0.03])
+  psi_tildes[2,1:N] = weights/(np.sum(weights)) # gw discharge split
+  
+  de2_de1 = -0.66*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
+  de2_de1 = np.nan_to_num(de2_de1)
+  
   alphas = np.zeros((1,tot))
   alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
   alphas[0,3] = np.random.uniform(0.3,0.6)
@@ -59,7 +66,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   betas = np.zeros([1,tot]) # gain from collaboration/support from others
   beta_bars = np.zeros([1,tot]) # gain from "natural" gain
 
-  sigmas_df = pd.read_csv('parameter_files\v1\sigmas.csv')
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'sigmas.xlsx')
+  sigmas_df = pd.read_excel(path)
   sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
   sigma_weights = np.array(sigma_weights, dtype=[('O', float)]).astype(float)
   total = np.sum(sigma_weights[:,:N],axis = 0)
@@ -81,12 +89,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   beta_hats[0,:N] = beta_params[:,1,0]*fraction
   beta_bars[0,:N] = beta_params[:,2,0]
 
-  sigma_tildes = np.zeros([3,N+K]) # gain based on each resource state variable
-  sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
+  sigma_tildes = np.zeros([3,N]) # gain based on each resource state variable
+  #sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
   sigma_tildes[1,0] = np.random.uniform(0.4,0.6) # salience of gw availability to communities
   sigma_tildes[2,0] = 1 - sigma_tildes[1,0] # salience of gw quality to communities
-  sigma_tildes[0,sw_users] = np.random.uniform(0.1,0.5,(2,)) # reliance of growers w/ sw access on sw
-  sigma_tildes[1,sw_users] = 1-sigma_tildes[0,sw_users] # reliance of growers w/ sw access on gw 
+  sigma_tildes[0,1:] = -de2_de1[1:]/(1-de2_de1[1:]) #np.random.uniform(0.1,0.5,(2,)) # reliance of growers w/ sw access on sw
+  sigma_tildes[1,1:] = 1-sigma_tildes[0,1:] # reliance of growers w/ sw access on gw 
 
   sigmas = np.zeros((N+K,tot)) # sigma_k,n is kxn $
   sigma_hats = np.zeros((M,tot))
@@ -106,7 +114,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   lambdas = np.zeros((N+K,tot))  # lambda_k,n is kxn $
   lambda_hats = np.zeros((M,tot))
-  lambdas_df = pd.read_excel('parameter_files\v1\lambdas.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'lambdas.xlsx')
+  lambdas_df = pd.read_excel(path)
   lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
   for i in range(tot): # loop through to fill in each (each column sums to 1)
@@ -162,7 +171,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   P = np.divide(P,np.sum(P,axis=0))
   P = np.nan_to_num(P)
   
-  return phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P
+  return phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, de2_de1, G, E, T, H, C, P
 
 def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   '''
@@ -189,9 +198,8 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # 4: small white area growers
   # 5: investor white area growers 
   
-  # TO DO: fix parameterization for water quality!!!
   sw_users = np.array([False]*(N+K))
-  sw_users[1:5] = True
+  sw_users[1:3] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
   de_dr = np.zeros((3,N+K))
@@ -203,37 +211,41 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[1,4] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
-  de2_de1 = -1
   de_dg = np.zeros((3,M,N))  ###### $
   de_dE = np.zeros((3,N+K,N))
   
   # de/dg for surface water
-  df = pd.read_excel('parameter_files\v1\de_dg_sw_lower.xlsx') #lower bounds for de_dg for sw
-  sw_lower = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_sw_lower.xlsx')
+  df = pd.read_excel(path) #lower bounds for de_dg for sw
+  sw_lower = df.fillna(0).values[:,1:]
   sw_lower = np.array(sw_lower, dtype=[('O', float)]).astype(float)
-  df = pd.read_excel('parameter_files\v1\de_dg_sw_upper.xlsx')
-  sw_upper = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_sw_upper.xlsx')
+  df = pd.read_excel(path)
+  sw_upper = df.fillna(0).values[:,1:]
   sw_upper = np.array(sw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[0,:,:] = np.random.uniform(sw_lower[-M:], sw_upper[-M:])
-  de_dE[0,N:,:] = np.random.uniform(sw_lower[N:N+K], sw_upper[N:N+K])
+  de_dE[0,N:,:] = np.random.uniform(sw_lower[:K], sw_upper[:K])
   # de/dg for groundwater
-  df = pd.read_excel('parameter_files\v1\de_dg_gw_lower.xlsx') #lower bounds for de_dg for sw
-  gw_lower = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_gw_lower.xlsx')
+  df = pd.read_excel(path) #lower bounds for de_dg for sw
+  gw_lower = df.fillna(0).values[:,1:]
   gw_lower = np.array(gw_lower, dtype=[('O', float)]).astype(float)
-  df = pd.read_excel('parameter_files\v1\de_dg_gw_upper.xlsx')
-  gw_upper = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_gw_upper.xlsx')
+  gw_upper = df.fillna(0).values[:,1:]
   gw_upper = np.array(gw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[1,:,:] = np.random.uniform(gw_lower[-M:], gw_upper[-M:])
-  de_dE[1,N:,:] = np.random.uniform(gw_lower[N:N+K], gw_upper[N:N+K]) 
+  de_dE[1,N:,:] = np.random.uniform(gw_lower[:K], gw_upper[:K]) 
   # de/dg for groundwater quality
-  df = pd.read_excel('parameter_files\v1\de_dg_gwq_lower.xlsx') #lower bounds for de_dg for sw
-  gwq_lower = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_gwq_lower.xlsx')
+  df = pd.read_excel(path) #lower bounds for de_dg for sw
+  gwq_lower = df.fillna(0).values[:,1:]
   gwq_lower = np.array(gwq_lower, dtype=[('O', float)]).astype(float)
-  df = pd.read_excel('parameter_files\v1\de_dg_gwq_upper.xlsx')
-  gwq_upper = df.fillna(0).values[1:,1:]
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'de_dg_gwq_upper.xlsx')
+  df = pd.read_excel(path)
+  gwq_upper = df.fillna(0).values[:,1:]
   gwq_upper = np.array(gwq_upper, dtype=[('O', float)]).astype(float) 
   de_dg[2,:,:] = np.random.uniform(gwq_lower[-M:], gwq_upper[-M:])
-  de_dE[2,N:,:] = np.random.uniform(gwq_lower[N:N+K], gwq_upper[N:N+K])
+  de_dE[2,N:,:] = np.random.uniform(gwq_lower[:K], gwq_upper[:K])
   # make sure RUs cannot use E as a strategy
   de_dE[:,:N,:] = np.zeros((3,N,N))
   
@@ -252,10 +264,8 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
   dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
   dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
-  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'[0][0]),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
-  # dg_dG[np.meshgrid(growers,grower_groups)] = np.random.uniform(1,2,(len(grower_groups),len(growers),N))
-  # dg_dG[DACs_idx, EJ_groups] = np.random.uniform(1,2,(1,1,N)
-  # dg_dG[growers, EJ_groups] = np.random.uniform(0,0.2,(len(growers),1,N))
+  dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
+
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
@@ -266,10 +276,11 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dy = np.random.uniform(0.5,1,(3,M,N)) # 
   dh_dy = np.random.uniform(0.5,1,(M))
   
-  data = pd.read_excel('parameter_files\dt_dh.xlsx', sheet_name=None) #lower bounds for de_dg for sw
+  path = Path.cwd().joinpath('parameter_files', 'v1', 'dt_dh.xlsx')
+  data = pd.read_excel(path, sheet_name=None) #lower bounds for de_dg for sw
   lower = data['lower'].fillna(0).values[:,1:]
   lower = np.array(lower, dtype=[('O', float)]).astype(float)
-  upper  = data['lower'].fillna(0).values[:,1:]
+  upper  = data['upper'].fillna(0).values[:,1:]
   upper = np.array(upper, dtype=[('O', float)]).astype(float)
   dts = np.random.uniform(lower,upper) 
   dt_dh = dts[-M:]  
@@ -296,96 +307,4 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   du_dx_plus = np.random.uniform(0,1,(tot))
   du_dx_minus = np.random.uniform(1,2,(tot))
 
-  return ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus
-
-##########################################################################################
-
-def run_system(user = None):
-  '''
-  Takes in system meta-parameters and produces a system parameterization and computes
-  stability of that system
-  
-  Inputs:
-    N1, N2, and N3: number of (exclusively) extractors, combined extractors and 
-      accessors, and (exclusively) accessors, respectively
-    K: number of non-resource user actors
-    M: number of decision centers
-    tot: total number of state variables (this is N + K + M + 1)
-    C: density of decision center interventions
-  Outputs:
-    stability: a boolean, True indicates stable, False indicates unstable
-    J: the Jacobian
-    converged: a boolean, True indicates the optimization reached convergence, False
-      indicates the optimization ran into the maximum number of iterations
-    strategy_history: a list of all the strategies of all of the actors throughout the 
-      optimization, used to debug the optimization
-    grad: the gradient of the objective function for the chosen strategy. used to debug
-      the optimization
-    total_connectance: the proportion of all possible interactions that exist in the 
-      final system
-    The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
-  '''
-  print('c')
-  entities = pd.read_excel('parameter_files\entity_list.xlsx',sheet_name=None, header=None)
-  N_list=entities['N'].values[:,0]
-  N = len(N_list)
-
-  K_list=entities['K'].values[:,0]
-  K = len(K_list)
-
-  M_list=entities['M'].values[:,0]
-  M = len(M_list)
-
-  tot = N+K+M
-  
-  R = 3
-
-  phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P = set_scale_params(N,M,K,N_list,M_list,K_list,tot,R)
-  
-  ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus = set_fixed_exp_params(N,M,K,N_list,M_list,K_list,tot,R)
-  
-  # check stability before strategy optimization
-  J = compute_Jacobian(N,K,M,tot,
-      phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P,
-      ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
-        
-  eigvals = np.linalg.eigvals(J)
-  if np.all(eigvals.real < 0):  # stable if real part of eigenvalues is negative
-    stability_1 = True
-  else:
-    stability_1 = False  # unstable if real part is positive, inconclusive if 0
-  
-  if user != None:
-    max_iters = 1000 # change back to 100!! 
-    strategy, stability_2, stability_3, converged, strategy_history, grad_history = optimize_strategy(max_iters, user, N, K, M, tot, R,
-      phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
-  else:
-    strategy = None
-    
-  J = compute_Jacobian(N,K,M,tot,
-      phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P,
-      ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
-
-  # check for positive entries
-  if np.any(np.diagonal(J) > 0):
-    print('Warning: positive diagonal elements of Jacobian')
-        
-  # --------------------------------------------------------------------------
-  # Compute the eigenvalues of the Jacobian and check stability
-  # --------------------------------------------------------------------------
-  eigvals = np.linalg.eigvals(J)
-  if np.all(eigvals.real < 0):  # stable if real part of eigenvalues is negative
-    stability = True
-  else:
-    stability = False  # unstable if real part is positive, inconclusive if 0
-
-  stability_final = stability 
-  
-  
-  return (stability_final, stability_1, stability_2, stability_3, converged, strategy_history, grad_history, strategy, J, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
-
-
-# if __name__ == "__main__":
-  # (N1,N2,N3,K,M,tot,C,stability, J, converged, strategy_history, grad, total_connectance,
-      # phi,psis,alphas,beta_tildes,sigma_tildes,betas,beta_bars,sigmas,etas,lambdas,eta_bars,mus,ds_dr,de_dr,de_dg,dg_dG,dg_dy,dp_dy,db_de,da_dr,dq_da,da_dp,dp_dH,dc_dC,dc_dw_n,dl_dx,du_dx,di_dK_p,di_dK_n,di_dy_p,di_dy_n,
-      # G,H,W,K_p) = main()
+  return ds_dr, de_dr, dt_dr, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus

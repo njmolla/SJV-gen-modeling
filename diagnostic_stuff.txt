@@ -7,7 +7,7 @@ data = np.concatenate((converged[:,np.newaxis],stabilities),axis=1)
 df = pd.DataFrame(data, columns=['Converged?', 'Initial stability', 'pre-optimization stability', 'stability throughout optimization', 'final'])
 
 weird_strategies = np.any([strategies[:,22]<0, strategies[:,23]>0, strategies[:,36]<0, strategies[:,37]>0], axis=0)
-all_stable = np.all(stabilities==[1,1,1,1],axis=1)
+
 np.all([weird_strategies,all_stable],axis=0)
 
 s_6 = np.all(stabilities==[1,1,0,1],axis=1)
@@ -21,6 +21,7 @@ strategies_binary[strategies < 0] = -1
 strategies_binary[strategies > 0] = 1
 strategies_binary[np.abs(strategies)<1e-3] = 0
 
+all_stable = np.all(stabilities==[1,1,1,1],axis=1)
 list = plt.plot(np.transpose(strategies_binary[all_stable][:,abs(np.sum(strategies_binary[all_stable],axis=0))>1e-5]),'.')
 
 np.nonzero(np.any(strategies<0, axis=0))

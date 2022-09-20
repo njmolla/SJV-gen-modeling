@@ -30,13 +30,23 @@ R = 3
 tot = N+K+M
 #resource_user = 'rural communities'
 resource_user = 'small growers'
+#resource_user = 'small growers (white area)'
 #resource_user = 'investor growers'
 #resource_user = 'investor growers (white area)'
 
-with open('strategies_%s_looping'%(resource_user), 'rb') as f:
+with open('data\strategies_%s'%(resource_user), 'rb') as f:
   strategies = pickle.load(f) 
+  
+with open('data\stabilities_%s'%(resource_user), 'rb') as f:
+  stabilities = pickle.load(f)
+  
+all_zeros = np.all(stabilities==[0,0,0,0],axis=1)
+stabilities = stabilities[~all_zeros] # filter out entries that have no stabilities recorded (were skipped)
 
-strategies = np.array(strategies)
+all_stable = np.all(stabilities==[1,1,1,1],axis=1)
+list = plt.plot(np.transpose(strategies[all_stable][:,abs(np.sum(strategies[all_stable],axis=0))>1e-5]),'.')
+
+strategies = np.array(strategies[all_stable])
 strategies_binary = np.zeros(np.shape(strategies))
 strategies_binary[strategies < 0] = -1
 strategies_binary[strategies > 0] = 1
@@ -92,7 +102,9 @@ for strategy in unique_strategies:
   translation = translate_strategies(strategy)
   strategies_translated += [translation]
 
-print(np.array(strategies_translated)[counts>=3])
+strategies_translated = np.concatenate(strategies_translated)
+
+print(np.unique(strategies_translated))
 
 # def index_to_action(index):
   # if index < R*M*N:

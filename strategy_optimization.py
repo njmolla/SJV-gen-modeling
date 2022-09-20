@@ -118,7 +118,7 @@ def grad_descent_constrained(initial_point, objective, alpha, i, N, K, M, R, tot
   #print('strategy:',x[403])
 
   # calculate how steady state changes with respect to strategy parameters
-  dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability\
+  dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability, G, E, T, H, C, P\
   = steady_state_gradient(x, objective, i, N, K, M, R, tot,
           phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus)
           
@@ -277,6 +277,14 @@ def optimize_strategy(max_iters, i, N, K, M, tot, R,
   '''
   # Initialize strategy
   strategy = np.zeros(len(G[0].flatten()) + len(E[0].flatten()) + len(T[0].flatten()) + len(H[0].flatten()) + len(C[0].flatten()) + len(P[0].flatten()))
+  # Make scale parameters of actor's effect on others non-zero
+  sigmas[i,:] += np.random.uniform(0.1,1) # set all to the same random number  
+  #sigmas[i,:] += np.random.uniform(0.1,1,(np.shape(sigmas[i,:]))) # set all to the same random number
+  #sigmas[i,10] += 1 # GET RID OF THIS - JUST FOR AN EXPERIMENT ############################################
+  sigmas = sigmas/np.sum(sigmas,axis=0) # renormalize to make sure columns sum to 1
+  lambdas[i,:] = np.random.uniform(0.1,1)
+  lambdas = lambdas/np.sum(lambdas,axis=0)
+  
   #v = np.zeros((N, len(strategy)) # velocity for gradient descent with momentum
   max_diff = 1  # arbitrary initial value, List of differences in euclidean distance between strategies in consecutive iterations
   iterations = 0

@@ -5,6 +5,7 @@ from numba import jit
 
 def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
           phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus, drdot_dG, dxdot_dG, drdot_dE, dxdot_dE, drdot_dH, dxdot_dH, drdot_dT, dxdot_dT, drdot_dC_plus, dxdot_dC_plus, drdot_dC_minus,dxdot_dC_minus, drdot_dP_plus, dxdot_dP_plus, drdot_dP_minus, dxdot_dP_minus):
+          
   R = 3
   # Unpack strategy parameters.
   G[l] = strategy[0:R*M*N].reshape((R,M,N))
@@ -40,6 +41,7 @@ def steady_state_gradient(strategy, n, l, N, K, M, R, tot,
   dR_dC_minus, dX_dC_minus = multiply_by_inverse_jacobian(drdot_dC_minus, dxdot_dC_minus, J_inv, tot, N, M, R)
   dR_dP_plus, dX_dP_plus = multiply_by_inverse_jacobian(drdot_dP_plus, dxdot_dP_plus, J_inv, tot, N, M, R)
   dR_dP_minus, dX_dP_minus = multiply_by_inverse_jacobian(drdot_dP_minus, dxdot_dP_minus, J_inv, tot, N, M, R)
+  
   return dR_dG, dX_dG, dR_dE, dX_dE, dR_dT, dX_dT, dR_dH, dX_dH, dR_dC_plus, dX_dC_plus, dR_dC_minus, dX_dC_minus, dR_dP_plus, dX_dP_plus, dR_dP_minus, dX_dP_minus, stability, G, E, T, H, C, P
 
 #@jit(nopython=True)
@@ -94,7 +96,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
     grad_G[2,:,:,n] += -de_dg[2,:,n]*dg_dG[2,n,:,n]
   
   #special case for e2
-  grad_G[1] += de2_de1*grad_G[0]
+  grad_G[1] += de2_de1[n]*grad_G[0]
   
   
   # grad wrt E should be R,R,N before being aggregated into one objective
@@ -121,12 +123,12 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
     grad_E[2,2,n] += -de_dE[2,n,n]
   
   #special case for e2
-  grad_E[1] += de2_de1*grad_E[0]
+  grad_E[1] += de2_de1[n]*grad_E[0]
   
   # grad wrt T
   
   grad_T = np.zeros((3))
-
+  
   for i in range(R):
     grad_T[i] = de_dr[i,n] * dR_dT[i,l] + np.sum(np.multiply(np.reshape(de_dg[i,:,n]*dg_dy[i,:,n], (M)), dX_dT[N+K:,l])
                    # scalar                               jxi         # m                             mji
@@ -141,7 +143,8 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
         ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K)),dX_dT[N:N+K,l]),axis=0)
           
   #special case for e2
-  grad_T[1] += de2_de1*grad_T[0]
+
+  grad_T[1] += de2_de1[n]*grad_T[0]
   
   # grad wrt H
   
@@ -162,7 +165,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
         ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,N:,n]*E_copy[N:,i,n],(K,1)),dX_dH[N:N+K,l]),axis=0)
           
   #special case for e2
-  grad_H[1] += de2_de1*grad_H[0]
+  grad_H[1] += de2_de1[n]*grad_H[0]
   
   # grad wrt C #########################
   
@@ -195,8 +198,8 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
         ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E[:,i,n],(N+K,1)),dX_dC_minus[:N+K,l]),axis=0)
           
   #special case for e2
-  grad_C_minus[1] += de2_de1*grad_C_minus[0]
-  grad_C_plus[1] += de2_de1*grad_C_plus[0]
+  grad_C_minus[1] += de2_de1[n]*grad_C_minus[0]
+  grad_C_plus[1] += de2_de1[n]*grad_C_plus[0]
   
   # grad wrt P #########################
   
@@ -229,8 +232,8 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
         ,axis=0) + np.sum(np.multiply(np.reshape(de_dE[i,:,n]*E_copy[:,i,n],(N+K,1,1)),dX_dP_minus[:N+K,l]),axis=0)
           
   #special case for e2
-  grad_P_minus[1] += de2_de1*grad_P_minus[0]
-  grad_P_plus[1] += de2_de1*grad_P_plus[0]
+  grad_P_minus[1] += de2_de1[n]*grad_P_minus[0]
+  grad_P_plus[1] += de2_de1[n]*grad_P_plus[0]
   
   # average objectives across resources to get an aggregated objective. average is weighted by sigma_tildes, an indication of #importance of each resource to the user
   
@@ -243,6 +246,10 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
   # grad_C_minus_avg = grad_C_minus[2]
   # grad_P_plus_avg = grad_P_plus[2]  
   # grad_P_minus_avg = grad_P_minus[2]
+  
+  #weights = np.zeros((3,7))
+  #weights[0] = phis*psis*psi_tildes[:,l]
+  #weights[1] = phis*psi_tildes[:,l]
   
   grad_G_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis,np.newaxis]*grad_G, axis=0)
   grad_E_avg = np.sum(sigma_tildes[:,l][:,np.newaxis,np.newaxis]*grad_E, axis=0)
@@ -270,7 +277,7 @@ def objective_grad(strategy, n, l, N, K, M, R, tot,
                          grad_P_avg.flatten()))
 
 
-#@jit(nopython=True)
+@jit(nopython=True)
 # def multiply_by_inverse_jacobian(drdot_dp, dxdot_dp, J_inv, tot, N, M, R):
   # # shape is the shape of strategy parameter p. 
   # shape = drdot_dp[0].shape
