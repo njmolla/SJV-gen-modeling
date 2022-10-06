@@ -1,14 +1,13 @@
 import numpy as np
 import networkx as nx
 import pandas as pd
-from parameterization_v4 import set_scale_params, set_fixed_exp_params
-#from parameterization_base import set_scale_params, set_fixed_exp_params
 from compute_J import compute_Jacobian
 from strategy_optimization import optimize_strategy
 from pathlib import Path
 
 
-def run_system(user = None):
+def run_system(user = None, parameterization = 'base'):
+
   '''
   Takes in system meta-parameters and produces a system parameterization and computes
   stability of that system
@@ -34,7 +33,21 @@ def run_system(user = None):
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
   print('a')
-  path = Path.cwd().joinpath('parameter_files', 'v4', 'entity_list.xlsx')
+  
+  if parameterization == 'base':
+    from parameterization_base import set_scale_params, set_fixed_exp_params
+  elif parameterization == 'v1':
+    from parameterization_v1 import set_scale_params, set_fixed_exp_params
+  elif parameterization == 'v2':
+    from parameterization_v2 import set_scale_params, set_fixed_exp_params
+  elif parameterization == 'v3':
+    from parameterization_v3 import set_scale_params, set_fixed_exp_params  
+  elif parameterization == 'v4':
+    from parameterization_v4 import set_scale_params, set_fixed_exp_params
+  else:
+    print('invalid parameterization. options are base, v1, v2, v3, and v4')
+    
+  path = Path.cwd().joinpath('parameter_files', parameterization, 'entity_list.xlsx')
   entities = pd.read_excel(path,sheet_name=None, header=None)
   N_list=entities['N'].values[:,0]
   N = len(N_list)
@@ -74,7 +87,7 @@ def run_system(user = None):
     print(np.nonzero(np.diagonal(J) >0))
   
   if user != None:
-    max_iters = 1000 # change back to 100!! 
+    max_iters = 1000 
     strategy, stability_2, stability_3, converged, strategy_history, grad_history = optimize_strategy(max_iters, user, N, K, M, tot, R,
       phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
       
