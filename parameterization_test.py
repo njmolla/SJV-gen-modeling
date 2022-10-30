@@ -8,10 +8,12 @@ from pathlib import Path
 
 ''' 
 Summary of changes from base parameterization:
- - Add in state intervention in SGMA (instead of GSAs) x
- - reduced groundwater extraction x
+ - reduce size/number of large growers (reduce amount of water they use so the split is more even among users) x
+ - increased interaction of small growers and communities with local governance, remove outsized influence of large growers x
+ - reduced groundwater and surface water extraction x
  - stronger enforcement of gw quality regulations x
- - more funding for orgs x
+ - increased non-ag extraction x
+ - increased interaction b/w small growers and rural communities
 '''
 
 def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
@@ -20,11 +22,11 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = np.random.uniform(0.57,0.7) # sw
-  phis[1] = np.random.uniform(0.084,0.103,(1,)) #gw
+  phis[0] = np.random.uniform(0.28,0.34) # sw
+  phis[1] = np.random.uniform(0.08,0.097,(1,)) #gw
 
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.73,0.89,(1,)) #sw
+  psis[0] = np.random.uniform(0.54,0.66,(1,)) #sw
   psis[1] = np.random.uniform(0.74,0.9,(1,)) #gw
   psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
@@ -45,29 +47,28 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   small_growers = np.array([False]*(N))
-  small_growers[[1,3]] = True
+  small_growers[[1,2,3,4]] = True
   # TO DO: fix sampling of parameters that should sum to 1
   psi_tildes = np.zeros((3,N)) # 
-  psi_tildes[0,1:3] = np.array([0.3,0.7]) # sw split
-  weights = np.array([1,5,25,10,60,1,1]) # gw split
+  psi_tildes[0,1:3] = np.array([0.5,0.5]) # sw split
+  weights = np.array([10,15,15,15,15,15,15]) # gw split
   psi_tildes[1] = weights/(np.sum(weights)) 
-  weights = np.array([0.07,0.4,0.07,0.4,0.03,0.03])
+  weights = np.array([2,2,2,2,1,1])
   psi_tildes[2,1:N] = weights/(np.sum(weights)) # gw discharge split
   
   de2_de1 = -0.66*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
   de2_de1 = np.nan_to_num(de2_de1)
   
   alphas = np.zeros((1,tot))
-  alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
-  alphas[0,3] = np.random.uniform(0.3,0.6)
-  alphas[0,[2,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
+  alphas[0,0:5] = np.random.uniform(0.3,0.6,(5,))
+  alphas[0,[5,6]] = np.random.uniform(0.05,0.1,(2,))
   alphas[0,N:] = np.random.uniform(0.05,0.1,(K+M,))
   beta_tildes = np.zeros([1,tot]) # gain based on resource access in general
   beta_hats = np.zeros([1,tot]) # gain from govt support
   betas = np.zeros([1,tot]) # gain from collaboration/support from others
   beta_bars = np.zeros([1,tot]) # gain from "natural" gain
 
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'sigmas.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'sigmas.xlsx')
   sigmas_df = pd.read_excel(path)
   sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
   sigma_weights = np.array(sigma_weights, dtype=[('O', float)]).astype(float)
@@ -76,9 +77,9 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   from_gov = np.sum(sigma_weights[N+K:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
   betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose()
-  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
-  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
+  betas_2 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_3 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_4 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
@@ -115,7 +116,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   lambdas = np.zeros((N+K,tot))  # lambda_k,n is kxn $
   lambda_hats = np.zeros((M,tot))
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'lambdas.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'lambdas.xlsx')
   lambdas_df = pd.read_excel(path)
   lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
@@ -146,7 +147,6 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
   G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
-  #G[[1,2]][:,N+EJ_groups[0],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1, (2,1,1))
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))
@@ -219,32 +219,32 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dE = np.zeros((3,N+K,N))
   
   # de/dg for surface water
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_sw_lower.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_sw_lower.xlsx')
   df = pd.read_excel(path) #lower bounds for de_dg for sw
   sw_lower = df.fillna(0).values[:,1:]
   sw_lower = np.array(sw_lower, dtype=[('O', float)]).astype(float)
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_sw_upper.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_sw_upper.xlsx')
   df = pd.read_excel(path)
   sw_upper = df.fillna(0).values[:,1:]
   sw_upper = np.array(sw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[0,:,:] = np.random.uniform(sw_lower[-M:], sw_upper[-M:])
   de_dE[0,N:,:] = np.random.uniform(sw_lower[:K], sw_upper[:K])
   # de/dg for groundwater
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_gw_lower.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_gw_lower.xlsx')
   df = pd.read_excel(path) #lower bounds for de_dg for sw
   gw_lower = df.fillna(0).values[:,1:]
   gw_lower = np.array(gw_lower, dtype=[('O', float)]).astype(float)
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_gw_upper.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_gw_upper.xlsx')
   gw_upper = df.fillna(0).values[:,1:]
   gw_upper = np.array(gw_upper, dtype=[('O', float)]).astype(float) 
   de_dg[1,:,:] = np.random.uniform(gw_lower[-M:], gw_upper[-M:])
   de_dE[1,N:,:] = np.random.uniform(gw_lower[:K], gw_upper[:K]) 
   # de/dg for groundwater quality
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_gwq_lower.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_gwq_lower.xlsx')
   df = pd.read_excel(path) #lower bounds for de_dg for sw
   gwq_lower = df.fillna(0).values[:,1:]
   gwq_lower = np.array(gwq_lower, dtype=[('O', float)]).astype(float)
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'de_dg_gwq_upper.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'de_dg_gwq_upper.xlsx')
   df = pd.read_excel(path)
   gwq_upper = df.fillna(0).values[:,1:]
   gwq_upper = np.array(gwq_upper, dtype=[('O', float)]).astype(float) 
@@ -256,30 +256,25 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # dg/dG doesn't depend on the resource, so treated as NxMxN and then broadcasted
   dg_dG = np.random.uniform(0.5,1,(N+K,M,N))  # dg_m,n/(dF_i,m,n * x_i) is ixmxn $
   # get indices for some exceptions
-  big_growers_idx = np.nonzero(N_list=='investor growers')
   IDs_idx = np.nonzero(M_list=='Irrigation/water districts')
   growers = np.nonzero(np.any([N_list == 'small growers', N_list =='investor growers', N_list == 'small growers (white area)', N_list =='investor growers (white area)'],axis=0))[0]
   grower_groups = np.nonzero(np.any([K_list == 'Grower advocacy groups', K_list == 'UC Extension/research community', K_list == 'Sustainable conservation', K_list == 'MPEP', K_list == 'PCAs/CCAs'],axis=0))[0]
   EJ_groups = np.nonzero(K_list=='EJ groups')
   DACs_idx = np.nonzero(N_list == 'rural communities')
   
-  dg_dG[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(N)) # big growers have outsized influence on IDs/WDs
-  dg_dG[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.1,(N)) # DACs have essentially no representation on IDs/WD boards
-  dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
-  dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
-  dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
+
   dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
 
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
-  dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.05,(1,M))
+  dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.1,(1,M))
   dh_dH[np.nonzero(N_list=='investor growers (white area)')] = np.random.uniform(0,0.1,(1,M))
   
   
   dg_dy = np.random.uniform(0.5,1,(3,M,N)) # 
   dh_dy = np.random.uniform(0.5,1,(M))
-  path = Path.cwd().joinpath('parameter_files', 'v3', 'dt_dh.xlsx')
+  path = Path.cwd().joinpath('parameter_files', 'test', 'dt_dh.xlsx')
   data = pd.read_excel(path, sheet_name=None) #lower bounds for de_dg for sw
   lower = data['lower'].fillna(0).values[:,1:]
   lower = np.array(lower, dtype=[('O', float)]).astype(float)
@@ -302,10 +297,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dc_dC[indices,indices] = 0
   dc_dC[:N+K,N+K+np.nonzero(M_list=='Friant-Kern Canal')[0][0]] = 0
   
-  dp_dP = np.zeros((N+K,M,tot))
-  # assume that ability to influence g corresponds to ability to influence p as well
-  dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
-  dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
+  dp_dP = np.random.uniform(0.5,1,(N+K,M,tot))
   dp_dy = np.random.uniform(0.5,1,(M,tot))
   du_dx_plus = np.random.uniform(0,1,(tot))
   du_dx_minus = np.random.uniform(1,2,(tot))

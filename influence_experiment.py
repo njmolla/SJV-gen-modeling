@@ -9,7 +9,7 @@ from pathlib import Path
 num_samples = 300
 from run_gen_model import run_system
 
-parameterization = 'v4'
+parameterization = 'test_2'
 print(parameterization)
 sensitivities_list = []
 influences_list = []
@@ -38,6 +38,7 @@ while i < num_samples:
   else:
     continue
 
+PSW = num_samples/seed+1
 
 with open('sensitivities_%s'%(parameterization), 'wb') as f:
   pickle.dump(sensitivities_list, f)

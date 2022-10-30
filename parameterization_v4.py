@@ -9,10 +9,11 @@ from pathlib import Path
 ''' 
 Summary of changes from base parameterization:
  - reduce size/number of large growers (reduce amount of water they use so the split is more even among users) x
- - increased interaction of small growers and communities with local governance, remove influence of large growers x
+ - increased interaction of small growers and communities with local governance, remove outsized influence of large growers x
  - reduced groundwater and surface water extraction x
  - stronger enforcement of gw quality regulations x
  - increased non-ag extraction x
+ - increased interaction b/w small growers and rural communities
 '''
 
 def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
@@ -77,9 +78,9 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   from_gov = np.sum(sigma_weights[N+K:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
   betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose()
-  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
-  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
+  betas_2 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_3 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_4 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
   betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
@@ -205,7 +206,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
-  ds_dr[1] = 0 # trying this out #######################################################################################################
+  ds_dr[1] = 0 
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)
@@ -300,10 +301,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dc_dC[indices,indices] = 0
   dc_dC[:N+K,N+K+np.nonzero(M_list=='Friant-Kern Canal')[0][0]] = 0
   
-  dp_dP = np.zeros((N+K,M,tot))
-  # assume that ability to influence g corresponds to ability to influence p as well
-  dp_dP[big_growers_idx,IDs_idx,:] = np.random.uniform(1,2,(tot))
-  dp_dP[DACs_idx,IDs_idx,:] = np.random.uniform(0,0.5,(tot))
+  dp_dP = np.random.uniform(0.5,1,(N+K,M,tot))
   dp_dy = np.random.uniform(0.5,1,(M,tot))
   du_dx_plus = np.random.uniform(0,1,(tot))
   du_dx_minus = np.random.uniform(1,2,(tot))

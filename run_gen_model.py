@@ -32,7 +32,7 @@ def run_system(user = None, parameterization = 'base'):
       final system
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
-  print('a')
+  print('c')
   
   if parameterization == 'base':
     from parameterization_base import set_scale_params, set_fixed_exp_params
@@ -44,6 +44,8 @@ def run_system(user = None, parameterization = 'base'):
     from parameterization_v3 import set_scale_params, set_fixed_exp_params  
   elif parameterization == 'v4':
     from parameterization_v4 import set_scale_params, set_fixed_exp_params
+  elif parameterization == 'test_2': # this one should be removed later ################################
+    from parameterization_test_2 import set_scale_params, set_fixed_exp_params    
   else:
     print('invalid parameterization. options are base, v1, v2, v3, and v4')
     
