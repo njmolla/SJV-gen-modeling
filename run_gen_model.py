@@ -32,7 +32,7 @@ def run_system(user = None, parameterization = 'base'):
       final system
     The remaining outputs are all of the sampled or computed scale, exponent, and strategy parameters.
   '''
-  print('c')
+  print('a')
   
   if parameterization == 'base':
     from parameterization_base import set_scale_params, set_fixed_exp_params
@@ -44,12 +44,13 @@ def run_system(user = None, parameterization = 'base'):
     from parameterization_v3 import set_scale_params, set_fixed_exp_params  
   elif parameterization == 'v4':
     from parameterization_v4 import set_scale_params, set_fixed_exp_params
-  elif parameterization == 'test_2': # this one should be removed later ################################
-    from parameterization_test_2 import set_scale_params, set_fixed_exp_params    
+  elif parameterization == 'v5': # this one should be removed later ################################
+    from parameterization_v5 import set_scale_params, set_fixed_exp_params    
   else:
     print('invalid parameterization. options are base, v1, v2, v3, and v4')
     
   path = Path.cwd().joinpath('parameter_files', parameterization, 'entity_list.xlsx')
+  #path = Path.cwd().joinpath('parameter_files', 'v4', 'entity_list.xlsx')
   entities = pd.read_excel(path,sheet_name=None, header=None)
   N_list=entities['N'].values[:,0]
   N = len(N_list)
@@ -80,7 +81,8 @@ def run_system(user = None, parameterization = 'base'):
     stability_1 = False  # unstable if real part is positive, inconclusive if 0
     
   if stability_1 == False or user == None:
-    stability_final, stability_2, stability_3, converged, strategy_history, grad_history, strategy = None, None, None, None, None, None, None
+    stability_final = stability_1
+    stability_2, stability_3, converged, strategy_history, grad_history, strategy = None, None, None, None, None, None
     return (stability_final, stability_1, stability_2, stability_3, converged, strategy_history, grad_history, strategy, J, eigvals, eigvectors, phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, G, E, T, H, C, P, ds_dr, de_dr, dt_dr, de2_de1, de_dg, de_dE, dg_dG, dh_dH, dg_dy, dh_dy, dt_dh, dt_dT, db_de, dc_dC, dp_dP, dp_dy, du_dx_plus, du_dx_minus)
     
     # check for positive entries

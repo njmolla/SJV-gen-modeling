@@ -28,10 +28,10 @@ M = len(M_list)
 R = 3
 
 tot = N+K+M
-resource_user = 'rural communities'
+#resource_user = 'rural communities'
 #resource_user = 'small growers'
 #resource_user = 'small growers (white area)'
-#resource_user = 'investor growers'
+resource_user = 'investor growers'
 #resource_user = 'investor growers (white area)'
 
 with open('data\strategies_%s'%(resource_user), 'rb') as f:
@@ -124,9 +124,9 @@ def translate_strategies_shortver(strategy):
   
   for i in range(len(np.nonzero(C)[0])):
     if C[np.nonzero(C)][i] > 0:
-      action = ['support/collaborate with %s' %(entity_list[np.nonzero(C)[0][i]])]
+      action = ['%s' %(entity_list[np.nonzero(C)[0][i]])]
     else:
-      action = ['undermine %s' %(entity_list[np.nonzero(C)[0][i]])]
+      action = ['%s' %(entity_list[np.nonzero(C)[0][i]])]
     translation += action
   
   for i in range(len(np.nonzero(P)[0])):
@@ -149,41 +149,46 @@ strategies_translated, indices = np.unique(strategies_translated, return_index =
 counts = np.sum(strategies_binary, axis=0)/len(strategies)
 counts_nonzero = counts[abs(counts)>0]
 counts_nonzero = counts_nonzero[indices]
-strategies_translated = np.array(strategies_translated)[abs(counts_nonzero)>0.25]
-counts = counts_nonzero[abs(counts_nonzero)>0.25]
-
-# x = np.arange(len(strategies_translated))
-# plt.figure()
-# plt.figure(figsize=(4, 12))
-# #plt.barh(x, counts, alpha=0.5)
-# plt.barh(x, counts, alpha=0.5, height = 1)
-# plt.yticks(ticks = x, labels = strategies_translated) #, rotation=30, ha='right')
-# #axs.set_xticklabels(strategies_translated, rotation=30, ha='right')
-# plt.xlabel('Proportion of Runs', fontsize = 12)
-# plt.title('Strategies', fontsize = 16)
-# plt.savefig('%s_opt_strategy_translated.svg'%(resource_user),bbox_inches = 'tight')
-
-## plotting for rural communities' strategy (more complicated than the others) ##
-
-# aggregate actions
-wq_strategies_indices = np.concatenate((np.arange(0,6), np.arange(9,16), np.array([17])))
-strategies_translated = np.delete(strategies_translated, wq_strategies_indices)
-wq_strategies_counts = max(counts[wq_strategies_indices])
-water_rights_counts = min(counts[[15,17]])
-counts = np.delete(counts, wq_strategies_indices)
-strategies_translated = np.append(strategies_translated, 'Water quality regulations effect on growers')
-counts = np.append(counts, wq_strategies_counts)
-strategies_translated = np.append(strategies_translated, 'Water Rights effect on growers')
-counts = np.append(counts, water_rights_counts)
+strategies_translated = np.array(strategies_translated)[abs(counts_nonzero)>0.01]
+counts = counts_nonzero[abs(counts_nonzero)>0.01]
 
 x = np.arange(len(strategies_translated))
-#x = np.linspace(0,55,len(strategies_translated))
-plt.figure(figsize=(6, 12))
-plt.barh(x, counts, alpha=0.5)
-plt.yticks(ticks = x, labels = strategies_translated) #, rotation=30, ha='right')
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.barh(x, counts, alpha=0.5)
+ax.set_yticks(x) #, rotation=30, ha='right')
+ax.set_yticklabels(strategies_translated)
+# get x-axis ticks and get rid of negatives
+#ax.set_xticklabels([str(abs(y)) for y in ax.get_xticks()])
+#ax.xaxis.set_major_formatter(lambda x, pos: str(abs(x))) '{:.1f}'.format(z)
+ax.xaxis.set_major_formatter(lambda x, pos: '{:.1f}'.format(abs(x)))
+#ax.xaxis.set_major_formatter("{x:.1f}") #xaxis.set_major_formatter('{x} km')
+#axs.set_xticklabels(strategies_translated, rotation=30, ha='right')
 plt.xlabel('Proportion of Runs', fontsize = 12)
 plt.title('Strategies', fontsize = 16)
 plt.savefig('%s_opt_strategy_translated.pdf'%(resource_user),bbox_inches = 'tight')
+
+## plotting for rural communities' strategy (more complicated than the others) ##
+
+# # aggregate actions
+# wq_strategies_indices = np.concatenate((np.arange(0,6), np.arange(9,16), np.array([17])))
+# strategies_translated = np.delete(strategies_translated, wq_strategies_indices)
+# wq_strategies_counts = max(counts[wq_strategies_indices])
+# water_rights_counts = min(counts[[15,17]])
+# counts = np.delete(counts, wq_strategies_indices)
+# strategies_translated = np.append(strategies_translated, 'Water quality regulations effect on growers')
+# counts = np.append(counts, wq_strategies_counts)
+# strategies_translated = np.append(strategies_translated, 'Water Rights effect on growers')
+# counts = np.append(counts, water_rights_counts)
+
+# x = np.arange(len(strategies_translated))
+# #x = np.linspace(0,55,len(strategies_translated))
+# plt.figure(figsize=(6, 12))
+# plt.barh(x, counts, alpha=0.5)
+# plt.yticks(ticks = x, labels = strategies_translated) #, rotation=30, ha='right')
+# plt.xlabel('Proportion of Runs', fontsize = 12)
+# plt.title('Strategies', fontsize = 16)
+# plt.savefig('%s_opt_strategy_translated.pdf'%(resource_user),bbox_inches = 'tight')
 
 
 # def index_to_action(index):

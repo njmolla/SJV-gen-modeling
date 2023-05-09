@@ -20,8 +20,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = 0.94 #1 # sw
-  phis[1] = np.random.uniform(0.11,0.13,(1,)) #gw
+  phis[0] = 0.66  # sw
+  phis[1] = np.random.uniform(0.1,0.12,(1,)) #gw
   psis = np.zeros(2)
   psis[0] = np.random.uniform(0.93,0.98,(1,)) #sw
   psis[1] = np.random.uniform(0.8,0.9,(1,)) #gw
@@ -101,7 +101,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
 
   for i in range(tot-1): # loop through to fill in each column
     sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
-    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[N+K:,:][:,i][sigma_weights[N+K:,:][:,i]>0])
+    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])
     
   # non-govt and govt orgs actors have natural gain and gain from collaboration from other actors (betas) and govt (beta_hats)
   total = np.sum(sigma_weights[:,N:N+K+M],axis = 0)
@@ -120,7 +120,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
   for i in range(tot): # loop through to fill in each (each column sums to 1)
     lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
-    lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
+    lambda_hats[:,i][lambdas_weights[-M:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[-M:,:][:,i][lambdas_weights[-M:,:][:,i]>0])
  
   # losses
   etas = np.zeros((1,tot))

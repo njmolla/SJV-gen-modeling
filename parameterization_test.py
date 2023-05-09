@@ -210,7 +210,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)
   de_dr[1,1] = np.random.uniform(0.5,1.5)
-  de_dr[1,2] = np.random.uniform(0,0.5)
+  de_dr[1,2] = np.random.uniform(0.5,1.5)
   de_dr[1,3] = np.random.uniform(1,2)
   de_dr[1,4] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1

@@ -47,7 +47,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sw_users = np.array([False]*(N+K))
   sw_users[1:3] = True
   small_growers = np.array([False]*(N))
-  small_growers[[2,3]] = True
+  small_growers[[1,3]] = True
   # TO DO: fix sampling of parameters that should sum to 1
   psi_tildes = np.zeros((3,N)) # 
   psi_tildes[0,1:3] = np.array([0.5,0.5]) # sw split
@@ -60,9 +60,13 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   de2_de1 = np.nan_to_num(de2_de1)
   
   alphas = np.zeros((1,tot))
-  alphas[0,[0,2]] = np.random.uniform(0.3,0.6,(2,))
-  #alphas[0,3] = np.random.uniform(0.3,0.6)
-  alphas[0,[1,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
+  alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
+  alphas[0,3] = np.random.uniform(0.3,0.6)
+  alphas[0,[2,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
+  # switch small and large params
+  alphas_large = alphas[0,2]
+  alphas[0,2] = alphas[0,1]
+  alphas[0,1] = alphas_large
   alphas[0,N:] = np.random.uniform(0.05,0.1,(K+M,))
   beta_tildes = np.zeros([1,tot]) # gain based on resource access in general
   beta_hats = np.zeros([1,tot]) # gain from govt support
@@ -87,11 +91,19 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   
   beta_params = np.stack([betas_1, betas_2, betas_3, betas_4, betas_5, betas_6, betas_7])
   beta_tildes[0,:N] = beta_params[:,0,0]
+  # switch small and large grower params
+  beta_tildes[0,1] = beta_params[2,0,0]
+  beta_tildes[0,2] = beta_params[1,0,0]
   fraction = np.where(total==0,0,from_ngo/total)
   betas[0,:N] = beta_params[:,1,0]*fraction
+  betas[0,1] = beta_params[2,1,0]*fraction[2]
+  betas[0,2] = beta_params[1,1,0]*fraction[1]
   beta_hats[0,:N] = beta_params[:,1,0]*fraction
+  beta_hats[0,1] = beta_params[2,1,0]*fraction[2]
+  beta_hats[0,2] = beta_params[1,1,0]*fraction[1]  
   beta_bars[0,:N] = beta_params[:,2,0]
 
+  
   sigma_tildes = np.zeros([3,N]) # gain based on each resource state variable
   #sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
   sigma_tildes[1,0] = np.random.uniform(0.4,0.6) # salience of gw availability to communities
@@ -106,6 +118,14 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
     sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[N+K:,:][:,i][sigma_weights[N+K:,:][:,i]>0])
     
+  # switch small and large
+  sigmas_large_col = sigmas[:,2] 
+  sigmas_large_row = sigmas[2]
+  sigmas[:,2] = sigmas[:,1]
+  sigmas[2] = sigmas[1]
+  sigmas[:,1] = sigmas_large_col
+  sigmas[1] = sigmas_large_row
+  
   # non-govt and govt orgs actors have natural gain and gain from collaboration from other actors (betas) and govt (beta_hats)
   total = np.sum(sigma_weights[:,N:N+K+M],axis = 0)
   from_ngo = np.sum(sigma_weights[:N+K,N:],axis = 0)
@@ -125,6 +145,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
     lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
  
+  lambdas_large_col = lambdas[:,2] 
+  lambdas_large_row = lambdas[2]
+  lambdas[:,2] = lambdas[:,1]
+  lambdas[2] = lambdas[1]
+  lambdas[:,1] = lambdas_large_col
+  lambdas[1] = lambdas_large_row
   # losses
   etas = np.zeros((1,tot))
   eta_hats = np.zeros((1,tot))
@@ -135,6 +161,17 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   fraction = np.where(total==0,0,from_ngo/total)
   etas[0] = np.random.uniform(fraction-0.1*(fraction),fraction+0.1*(fraction))*(1-eta_bars)
   eta_hats[0] = 1 - eta_bars[0] - etas[0]
+  
+  # switch small and large
+  beta_bars[0,1] = beta_params[2,2,0]*fraction[2]
+  beta_bars[0,2] = beta_params[1,2,0]*fraction[1] 
+  eta_bars_large = eta_bars[2]
+  eta_bars[2] = eta_bars[1]
+  eta_bars[1] = eta_bars_large
+  
+  eta_hats_large = eta_hats[2]
+  eta_hats[2] = eta_hats[1]
+  eta_hats[1] = eta_hats_large
   
   # effort allocation parameters 
   G = np.zeros((N+K,R,M,N))  # F_i,m,n is ixmxn positive effort for influencing resource extraction governance $
@@ -153,27 +190,61 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   G = np.divide(G,np.sum(G,axis=0))
   G = np.nan_to_num(G)
   
+  G_large = G[2]
+  G[2] = G[1]
+  G[1] = G_large
+  
   E = np.zeros((N+K,3,N))
   E[N+EJ_groups[0],[1,2],DACs_idx] = np.random.uniform(0.5,1, (1,2))
   E = np.divide(E,np.sum(E,axis=0))
   E = np.nan_to_num(E)
+  
+  E_large = E[2]
+  E[2] = E[1]
+  E[1] = E_large
+  
   T = np.zeros(N+K)
   T[N+np.nonzero(K_list == 'Sustainable conservation')[0]] = np.random.uniform(0.5,1)
   T = T/np.sum(T)
+  
+  T_large = T[2]
+  T[2] = T[1]
+  T[1] = T_large
+  
   H = np.zeros((N+K,M))  # effort for influencing recharge policy 
   H[N + np.nonzero(K_list=='Flood-MAR network')[0], np.nonzero(M_list=='Water Rights Division (SWRCB)')[0]] = np.random.uniform(0.3,0.5)
   H = np.divide(H,np.sum(H,axis=0))
   H = np.nan_to_num(H)
+  
+  H_large = H[2]
+  H[2] = H[1]
+  H[1] = H_large
+  
   C = sigma_weights[:N+K]  # effort for collaboration. C_i,n is ixn 
   C[lambdas_weights[:N+K]>0] = -1*lambdas_weights[:N+K][lambdas_weights[:N+K]>0]
   C = np.divide(C,np.sum(np.abs(C),axis=0))
   C = np.nan_to_num(C)
+  
+  lambdas_large_col = lambdas[:,2] 
+  lambdas_large_row = lambdas[2]
+  lambdas[:,2] = lambdas[:,1]
+  lambdas[2] = lambdas[1]
+  lambdas[:,1] = lambdas_large_col
+  lambdas[1] = lambdas_large_row
+  
+  C_large_row = C[2]
+  C_large_col = C[:,2]
+  C[2] = C[1]
+  C[:,2] = C[:,1]
+  C[1] = C_large_row
+  C[:,1] = C_large_col
   
   
   P = np.zeros((N+K,M,tot))
   P[EJ_groups,np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1)
   P = np.divide(P,np.sum(P,axis=0))
   P = np.nan_to_num(P)
+  
   
   return phis, psis, psi_bars, eq_R_ratio, psi_tildes, alphas, beta_tildes, sigma_tildes, betas, beta_hats, beta_bars, sigmas, sigma_hats, etas, eta_bars, eta_hats, lambdas, lambda_hats, de2_de1, G, E, T, H, C, P
 
@@ -215,6 +286,9 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[1,3] = np.random.uniform(1,2)
   de_dr[1,4] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1
+  de_dr_large = de_dr[1,2]
+  de_dr[1,2] = de_dr[1,1]
+  de_dr[1,1] = de_dr_large
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $
   de_dE = np.zeros((3,N+K,N))
@@ -254,6 +328,10 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # make sure RUs cannot use E as a strategy
   de_dE[:,:N,:] = np.zeros((3,N,N))
   
+  de_dg_large = de_dg[:,:,2]
+  de_dg[:,:,2] = de_dg[:,:,1]
+  de_dg[:,:,1] = de_dg_large
+  
   # dg/dG doesn't depend on the resource, so treated as NxMxN and then broadcasted
   dg_dG = np.random.uniform(0.5,1,(N+K,M,N))  # dg_m,n/(dF_i,m,n * x_i) is ixmxn $
   # get indices for some exceptions
@@ -264,6 +342,9 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   EJ_groups = np.nonzero(K_list=='EJ groups')
   DACs_idx = np.nonzero(N_list == 'rural communities')
   
+  dg_dG[big_growers_idx,np.nonzero(M_list=='Drinking Water Division (SWRCB)'),:] = 0
+  dg_dG[big_growers_idx,np.nonzero(M_list=='Local Water Boards'),:] = 0
+  dg_dG[big_growers_idx,np.nonzero(M_list=='County Board of Supervisors'),:] = 0
   dg_dG[:,np.nonzero(M_list=='Friant-Kern Canal'),:] = 0 # cannot affect how Friant-kern canal delivers water to individuals
 
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))

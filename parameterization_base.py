@@ -19,7 +19,6 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   phis = np.zeros(2) 
   phis[0] = 0.54#1 # sw
   phis[1] = np.random.uniform(0.11,0.13,(1,)) #gw
-  #phis[1] = np.random.uniform(0.06,0.08,(1,)) #gw
 
   psis = np.zeros(2)
   psis[0] = np.random.uniform(0.93,0.98,(1,)) #sw
@@ -27,7 +26,6 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
   psi_bars[1] = 1-psis[1]
-  #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
   eq_R_ratio = (psi_bars[1]/psi_bars[0])*(phis[1]/phis[0])
 
   # 1: DACs
@@ -73,13 +71,13 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   from_ngo = np.sum(sigma_weights[:N+K,:N],axis = 0)
   from_gov = np.sum(sigma_weights[N+K:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
-  betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose()
-  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
-  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose() # rural communities
+  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose() # small district growers
+  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose() # large district growers
+  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose() # small white area growers
+  betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose() # large white area growers
+  betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose() # municipalities
+  betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose() # other water users/dischargers
   
   beta_params = np.stack([betas_1, betas_2, betas_3, betas_4, betas_5, betas_6, betas_7])
   beta_tildes[0,:N] = beta_params[:,0,0]
@@ -210,6 +208,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[1,2] = np.random.uniform(0,0.5)
   de_dr[1,3] = np.random.uniform(1,2)
   de_dr[1,4] = np.random.uniform(0,0.5)
+  de_dr[1,5] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $
