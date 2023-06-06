@@ -4,19 +4,18 @@ import numpy as np
 import pickle
 import pandas as pd
 from pathlib import Path
+import scipy
 
 
 num_samples = 300
 from run_gen_model import run_system
 
-parameterization = 'v4'
+parameterization = 'base'
 print(parameterization)
 sensitivities_list = []
-sensitivities_water_list = []
-sensitivities_social_list = []
+partial_impacts = []
 influences_list = []
-influences_water_list = []
-influences_social_list = []
+
 seeds = []
 
 i=0
@@ -30,23 +29,18 @@ while i < num_samples:
   seed += 1
 
   if stability_1 == True:
-    right_eigvals = eigvals
-    right_eigenvectors = eigvectors
-    left_eigvals, left_eigenvectors = np.linalg.eig(np.transpose(J))
-    sensitivities = np.log(-np.sum(np.abs(right_eigenvectors)/right_eigvals,axis=1))
+    eigvals, left_eigenvectors, right_eigenvectors = scipy.linalg.eig(J, left=True)
+    # get L1 norm of eigenvectors to make sensitivities and influences sum up nicely
+    right_eigenvectors = right_eigenvectors/np.sum(abs(right_eigenvectors),axis=0)
+    left_eigenvectors = left_eigenvectors/np.sum(abs(left_eigenvectors),axis=0)
+    # get total sensitivities (can get rid of these eventually, for validation purposes)
+    sensitivities = -np.sum(np.abs(right_eigenvectors)/eigvals,axis=1)
     sensitivities_list.append(sensitivities)
-    influences = np.log(-np.sum(np.abs(left_eigenvectors)/left_eigvals,axis=1))
+    influences = -np.sum(np.abs(left_eigenvectors)/eigvals,axis=1)
     influences_list.append(influences)
-    # sensitivities and influences broken down by contribution from resources and social interactions
-    sensitivities_water = np.log(-np.sum(np.abs(right_eigenvectors[:,0:3])/right_eigvals[0:3],axis=1))
-    sensitivities_water_list.append(sensitivities_water)
-    sensitivities_social = np.log(-np.sum(np.abs(right_eigenvectors[:,3:])/right_eigvals[3:],axis=1))
-    sensitivities_social_list.append(sensitivities_social)   
-    
-    influences_water = np.log(-np.sum(np.abs(left_eigenvectors[:,0:3])/left_eigvals[0:3],axis=1))
-    influences_water_list.append(influences_water)
-    influences_social = np.log(-np.sum(np.abs(left_eigenvectors[:,3:])/left_eigvals[3:],axis=1))
-    influences_social_list.append(influences_social)
+    # impacts broken down by each variable
+    partial_impact = np.transpose(np.abs(right_eigenvectors)@np.transpose(np.abs(left_eigenvectors)/-np.broadcast_to(eigvals,np.shape(right_eigenvectors))))
+    partial_impacts.append(partial_impact)
     
     seeds.append(seed) # keep track of which seeds lead to stable systems
     i += 1
@@ -54,17 +48,6 @@ while i < num_samples:
     continue
 
 
-with open('data\influences_sensitivities\%s\sensitivities_%s_water'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(sensitivities_water_list, f)
-  
-with open('data\influences_sensitivities\%s\sensitivities_%s_social'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(sensitivities_social_list, f)
-
-with open('data\influences_sensitivities\%s\influences_%s_water'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(influences_water_list, f)
-  
-with open('data\influences_sensitivities\%s\influences_%s_social'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(influences_social_list, f)
 
 with open('data\influences_sensitivities\%s\sensitivities_%s'%(parameterization,parameterization), 'wb') as f:
   pickle.dump(sensitivities_list, f)
@@ -72,3 +55,5 @@ with open('data\influences_sensitivities\%s\sensitivities_%s'%(parameterization,
 with open('data\influences_sensitivities\%s\influences_%s'%(parameterization,parameterization), 'wb') as f:
   pickle.dump(influences_list, f)
 
+with open('data\influences_sensitivities\%s\partial_impacts_%s'%(parameterization,parameterization), 'wb') as f:
+  pickle.dump(partial_impacts, f)

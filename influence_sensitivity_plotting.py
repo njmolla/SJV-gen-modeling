@@ -10,6 +10,12 @@ entities = pd.read_excel('parameter_files\\base\entity_list.xlsx',sheet_name=Non
 N_list=entities['N'].values[:,0]
 N = len(N_list)
 
+K_list=entities['K'].values[:,0]
+K = len(K_list)
+
+M_list=entities['M'].values[:,0]
+M = len(M_list)
+
 def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points = N, effect_type = None):
   if effect_type == None:
     filepath_sensitivity = Path('data\influences_sensitivities\%s\sensitivities_%s'
@@ -45,8 +51,7 @@ def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points 
   for i in range(N):
     axs[pos_x, pos_y].annotate('', xy = (sensitivities_avg[i], influences_avg[i]), xytext =(sensitivities_avg_base[i], influences_avg_base[i]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[i]], arrowstyle='-|>', mutation_scale=15))
  
-############################################################################# 
-
+# Use to compare all four scenarios to the base scenario
 comparison_type = None
 
 if comparison_type == None:
@@ -97,7 +102,6 @@ axs[1,1].set_title('Change Nature of Agriculture')
 
 
 
-
 axs[1,0].set_xlabel('Sensitivity', fontsize = 18)
 axs[1,1].set_xlabel('Sensitivity', fontsize = 18)
 axs[0,0].set_ylabel('Influence', fontsize = 18)
@@ -111,4 +115,44 @@ handles, labels = axs[0,1].get_legend_handles_labels()
 axs[0,1].legend(handles[:N], labels[:N],bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 plt.savefig('comparisons_%s.svg'%(comparison_type), bbox_inches='tight')
 
+#####################################################################################
+# Plot partial sensitivities and influences for base scenario
+
+
+with open(Path('data\influences_sensitivities\\base\partial_impacts_base'), 'rb') as f:
+  partial_impacts_base = pickle.load(f)
+
+
+impacts_base_mean = np.mean(partial_impacts_base, axis=0)
+import pandas as pd
+
+entities = pd.read_excel('parameter_files\\base\entity_list.xlsx',sheet_name=None, header=None)
+
+R_list = ['surface water', 'groundwater', 'groundwater quality']
+
+all_list = np.concatenate((np.array(R_list), N_list, K_list, M_list))
+
+categories = ['resource users', 'non-governmental organizations', 'government entities']
+
+df = pd.DataFrame(index=N_list, columns=R_list + categories)
+
+for resource_user in N_list:
+  df.loc[resource_user]['surface water'] = np.real(impacts_base_mean[all_list==resource_user] [:,all_list=='surface water'])
+  df.loc[resource_user]['groundwater'] = np.real(impacts_base_mean[all_list==resource_user] [:,all_list=='groundwater'])
+  df.loc[resource_user]['groundwater quality'] = np.real(impacts_base_mean[all_list==resource_user] [:,all_list=='groundwater quality'])
+  df.loc[resource_user]['resource users'] = np.real(np.sum(impacts_base_mean[all_list==resource_user][:,3:N+3]))
+  df.loc[resource_user]['non-governmental organizations'] = np.real(np.sum(impacts_base_mean[all_list==resource_user][:,N+3:N+3+K]))
+  df.loc[resource_user]['government entities'] = np.real(np.sum(impacts_base_mean[all_list==resource_user][:,N+3+K:]))
+
+colors = plt.cm.viridis(df.to_numpy(dtype = float))
+
+fig = plt.figure()
+ax = fig.add_subplot(111, frameon=True, xticks=[], yticks=[])
+
+table=plt.table(rowLabels=df.index, colLabels=df.columns, 
+                    loc='center', cellColours=colors)
+
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+plt.show()
 

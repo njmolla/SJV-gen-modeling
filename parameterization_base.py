@@ -17,7 +17,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = 0.54#1 # sw
+  phis[0] = 0.54 # sw
   phis[1] = np.random.uniform(0.11,0.13,(1,)) #gw
 
   psis = np.zeros(2)
@@ -200,7 +200,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
-  ds_dr[1] = 0 # trying this out #######################################################################################################
+  ds_dr[1] = 0 
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)
