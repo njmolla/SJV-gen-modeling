@@ -124,7 +124,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   eta_hats = np.zeros((1,tot))
   total = np.sum(lambdas_weights,axis = 0)
   from_ngo = np.sum(lambdas_weights[:N+K],axis = 0)
-  from_gov = np.sum(lambdas_weights[N+K:],axis = 0)
+  from_gov = np.sum(lambdas_weights[-M:],axis = 0)
   eta_bars = np.random.uniform(beta_bars[0],0.9,(tot))
   fraction = np.where(total==0,0,from_ngo/total)
   etas[0] = np.random.uniform(fraction-0.1*(fraction),fraction+0.1*(fraction))*(1-eta_bars)
@@ -140,8 +140,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   # treatment infrastructure from the state
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
-  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))
@@ -208,7 +208,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   de_dr[1,2] = np.random.uniform(0,0.5)
   de_dr[1,3] = np.random.uniform(1,2)
   de_dr[1,4] = np.random.uniform(0,0.5)
-  de_dr[1,5] = np.random.uniform(0,0.5)
+  #de_dr[1,5] = np.random.uniform(0,0.5)
   de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $

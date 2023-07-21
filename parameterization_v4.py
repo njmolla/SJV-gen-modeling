@@ -75,7 +75,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sigma_weights = np.array(sigma_weights, dtype=[('O', float)]).astype(float)
   total = np.sum(sigma_weights[:,:N],axis = 0)
   from_ngo = np.sum(sigma_weights[:N+K,:N],axis = 0)
-  from_gov = np.sum(sigma_weights[N+K:,:N],axis = 0)
+  from_gov = np.sum(sigma_weights[-M:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
   betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
   betas_2 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
@@ -104,12 +104,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
 
   for i in range(tot-1): # loop through to fill in each column
     sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
-    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[N+K:,:][:,i][sigma_weights[N+K:,:][:,i]>0])
+    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])
     
   # non-govt and govt orgs actors have natural gain and gain from collaboration from other actors (betas) and govt (beta_hats)
   total = np.sum(sigma_weights[:,N:N+K+M],axis = 0)
   from_ngo = np.sum(sigma_weights[:N+K,N:],axis = 0)
-  from_gov = np.sum(sigma_weights[N+K:,N:],axis = 0)
+  from_gov = np.sum(sigma_weights[-M:,N:],axis = 0)
   beta_bars[0,N:] = np.random.uniform(np.ones(K+M)*0.2, np.ones(K+M)*0.3)
   fraction = np.where(total==0,0,from_ngo/total)
   betas[0,N:] = np.random.uniform(fraction-0.1*fraction,fraction+0.1*(fraction)) * (1-beta_bars[0,N:])
@@ -123,14 +123,14 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
   for i in range(tot-1): # loop through to fill in each (each column sums to 1)
     lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
-    lambda_hats[:,i][lambdas_weights[N+K:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[N+K:,:][:,i][lambdas_weights[N+K:,:][:,i]>0])
+    lambda_hats[:,i][lambdas_weights[-M:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[-M:,:][:,i][lambdas_weights[-M:,:][:,i]>0])
  
   # losses
   etas = np.zeros((1,tot))
   eta_hats = np.zeros((1,tot))
   total = np.sum(lambdas_weights,axis = 0)
   from_ngo = np.sum(lambdas_weights[:N+K],axis = 0)
-  from_gov = np.sum(lambdas_weights[N+K:],axis = 0)
+  from_gov = np.sum(lambdas_weights[-M:],axis = 0)
   eta_bars = np.random.uniform(beta_bars[0],0.9,(tot))
   fraction = np.where(total==0,0,from_ngo/total)
   etas[0] = np.random.uniform(fraction-0.1*(fraction),fraction+0.1*(fraction))*(1-eta_bars)
@@ -146,8 +146,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   # treatment infrastructure from the state
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
-  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))

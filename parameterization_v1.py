@@ -20,7 +20,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = 0.66  # sw
+  phis[0] = np.random.uniform(0.66,0.68,(1,))  # sw
   phis[1] = np.random.uniform(0.1,0.12,(1,)) #gw
   psis = np.zeros(2)
   psis[0] = np.random.uniform(0.93,0.98,(1,)) #sw
@@ -143,8 +143,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   # treatment infrastructure from the state
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
-  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))

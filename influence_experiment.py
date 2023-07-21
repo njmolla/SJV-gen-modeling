@@ -2,13 +2,10 @@ from run_gen_model import run_system
 import numpy as np
 #from mpi4py import MPI
 import pickle
-import pandas as pd
-from pathlib import Path
 import scipy
 
 
 num_samples = 300
-from run_gen_model import run_system
 
 parameterization = 'base'
 print(parameterization)
@@ -34,11 +31,12 @@ while i < num_samples:
     right_eigenvectors = right_eigenvectors/np.sum(abs(right_eigenvectors),axis=0)
     left_eigenvectors = left_eigenvectors/np.sum(abs(left_eigenvectors),axis=0)
     # get total sensitivities (can get rid of these eventually, for validation purposes)
-    sensitivities = -np.sum(np.abs(right_eigenvectors)/eigvals,axis=1)
-    sensitivities_list.append(sensitivities)
-    influences = -np.sum(np.abs(left_eigenvectors)/eigvals,axis=1)
-    influences_list.append(influences)
+    # sensitivities = np.log(-np.sum(np.abs(right_eigenvectors)/eigvals,axis=1))
+    # sensitivities_list.append(sensitivities)
+    # influences = np.log(-np.sum(np.abs(left_eigenvectors)/eigvals,axis=1))
+    # influences_list.append(influences)
     # impacts broken down by each variable
+    #partial_impact = np.abs(np.transpose(right_eigenvectors@np.transpose(left_eigenvectors/-np.broadcast_to(eigvals,np.shape(right_eigenvectors)))))
     partial_impact = np.transpose(np.abs(right_eigenvectors)@np.transpose(np.abs(left_eigenvectors)/-np.broadcast_to(eigvals,np.shape(right_eigenvectors))))
     partial_impacts.append(partial_impact)
     
@@ -49,11 +47,11 @@ while i < num_samples:
 
 
 
-with open('data\influences_sensitivities\%s\sensitivities_%s'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(sensitivities_list, f)
+# with open('data\influences_sensitivities\%s\sensitivities_%s'%(parameterization,parameterization), 'wb') as f:
+#   pickle.dump(sensitivities_list, f)
 
-with open('data\influences_sensitivities\%s\influences_%s'%(parameterization,parameterization), 'wb') as f:
-  pickle.dump(influences_list, f)
+# with open('data\influences_sensitivities\%s\influences_%s'%(parameterization,parameterization), 'wb') as f:
+#   pickle.dump(influences_list, f)
 
-with open('data\influences_sensitivities\%s\partial_impacts_%s'%(parameterization,parameterization), 'wb') as f:
+with open('data\influences_sensitivities\%s\partial_impacts_%s_alt'%(parameterization,parameterization), 'wb') as f:
   pickle.dump(partial_impacts, f)
