@@ -112,6 +112,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   fraction = np.where(total==0,0,from_ngo/total)
   betas[0,N:] = np.random.uniform(fraction-0.1*fraction,fraction+0.1*(fraction)) * (1-beta_bars[0,N:])
   beta_hats[0,N:] = 1 - beta_bars[0,N:] - betas[0,N:]
+
   
   lambdas = np.zeros((N+K,tot))  # lambda_k,n is kxn $
   lambda_hats = np.zeros((M,tot))
@@ -205,7 +206,6 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   sw_users[1:3] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
-  ds_dr[1] = 0 # trying this out #######################################################################################################
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
   de_dr[1,0] = np.random.uniform(1,2)

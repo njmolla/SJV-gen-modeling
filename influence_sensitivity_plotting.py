@@ -218,5 +218,5 @@ def partial_impacts_table(parameterization):
   plt.show()
   plt.savefig('partial_impacts_table_%s.svg'%(parameterization), bbox_inches='tight')
 
-partial_impacts_table('base')
-partial_impacts_table('v4')
+#partial_impacts_table('base')
+#partial_impacts_table('v4')

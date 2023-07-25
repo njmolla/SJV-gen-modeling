@@ -113,6 +113,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   betas[0,N:] = np.random.uniform(fraction-0.1*fraction,fraction+0.1*(fraction)) * (1-beta_bars[0,N:])
   beta_hats[0,N:] = 1 - beta_bars[0,N:] - betas[0,N:]
   
+  # same as base, with additional burden of groundwater supply regulations
   lambdas = np.zeros((N+K,tot))  # lambda_k,n is kxn $
   lambda_hats = np.zeros((M,tot))
   path = Path.cwd().joinpath('parameter_files', 'v3', 'lambdas.xlsx')
