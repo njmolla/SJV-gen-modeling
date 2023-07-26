@@ -66,7 +66,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   beta_hats = np.zeros([1,tot]) # gain from govt support
   betas = np.zeros([1,tot]) # gain from collaboration/support from others
   beta_bars = np.zeros([1,tot]) # gain from "natural" gain
-
+  
+  # adjusted to reflect interactions with GSAs
   path = Path.cwd().joinpath('parameter_files', 'v2', 'sigmas.xlsx')
   sigmas_df = pd.read_excel(path)
   sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
@@ -145,9 +146,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   # treatment infrastructure from the state
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
-  #G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
-  #G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
-  #G[[1,2]][:,N+EJ_groups[0],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(0.5,1, (2,1,1))
+  G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
+  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))

@@ -7,7 +7,7 @@ import scipy
 
 num_samples = 300
 
-parameterization = 'v1'
+parameterization = 'v4'
 print(parameterization)
 sensitivities_list = []
 partial_impacts = []

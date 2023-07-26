@@ -14,16 +14,17 @@ def parameters_comparison(parameter,scenario1,scenario2):
   param_2 = np.array(param_2, dtype=[('O', float)]).astype(float)
   if np.shape(param_1)==np.shape(param_2):
     diff = param_2-param_1
+    if np.sum(diff)<1e-5:
+      print('no difference')
   else:
     diff = None
     print('parameters are different shapes')
-    
-  if np.sum(diff)<1e-5:
-    print('no difference')
-    
+      
   return diff, param_1, param_2
   
-diff, sigma_weights, sigma_weights_v1 = parameters_comparison('sigmas','base','v1')
+#diff, sigma_weights, sigma_weights_v1 = parameters_comparison('sigmas','base','v1')
+diff, de_dg, de_dg_v1 = parameters_comparison('de_dg_sw_lower','base','v1')
+
 # path = Path.cwd().joinpath('parameter_files', 'base', 'sigmas.csv')
 # sigmas_df = pd.read_csv(path)
 # sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
