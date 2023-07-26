@@ -52,9 +52,8 @@ def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points 
   else:
     influences_avg = np.real(influences_avg)
     
-  
-  for i in range(N-2):
-    axs[pos_x, pos_y].annotate('', xy = (sensitivities_avg[i], influences_avg[i]), xytext =(sensitivities_avg_base[i], influences_avg_base[i]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[i]], arrowstyle='-|>', mutation_scale=15))
+    
+  return influences_avg, sensitivities_avg
 
   
 # Use to compare all four scenarios to the base scenario
@@ -85,33 +84,61 @@ sensitivities_avg_base = np.sum(impacts_base_mean,axis=0)[3:3+N-2]
 #sensitivities_avg_base = np.log(np.mean(sensitivities_list_base, axis=0)[3:3+N])
 
 # check for non-zero imaginary part of sensitivity or influence values
-if np.any(abs(sensitivities_avg_base-np.real(sensitivities_avg_base)) > 1e-20):
+if np.any(abs(sensitivities_avg_base-np.real(sensitivities_avg_base)) > 1e-10):
   print('complex sensitivity values!')
 else:
   sensitivities_avg_base = np.real(sensitivities_avg_base)
   
-if np.any(abs(influences_avg_base-np.real(influences_avg_base)) > 1e-20):
+if np.any(abs(influences_avg_base-np.real(influences_avg_base)) > 1e-10):
   print('complex influence values!')
 else:
   influences_avg_base = np.real(influences_avg_base)
 
+influences = np.zeros((5,5))
+sensitivities = np.zeros((5,5))
+
+influences[0], sensitivities[0] = influences_avg_base, sensitivities_avg_base
+influences[1], sensitivities[1] = plot_comparison('v1', 0, 0)
+influences[2], sensitivities[2] = plot_comparison('v2', 0, 1)
+influences[3], sensitivities[3] = plot_comparison('v3', 1, 0)
+influences[4], sensitivities[4] = plot_comparison('v4', 1, 1)
+
+# mins and maxes for setting plot bounds
+sensitivity_min = np.min(sensitivities)
+influences_min = np.min(influences)-5
+
+sensitivity_max = np.max(sensitivities)
+influences_max = np.max(influences)+5
 
 sns.set_style("darkgrid")
 fig, axs = plt.subplots(nrows=2, ncols=2, sharex='all', sharey='all')
+axs[0,0].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs[0,0].set_ylim(ymin=influences_min, ymax=influences_max)
+axs[0,1].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs[0,1].set_ylim(ymin=influences_min, ymax=influences_max)
+axs[1,0].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs[1,0].set_ylim(ymin=influences_min, ymax=influences_max)
+axs[1,1].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs[1,1].set_ylim(ymin=influences_min, ymax=influences_max)
+
+
 a = sns.scatterplot(ax = axs[0,0], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
-plot_comparison('v1', 0, 0)
+
 axs[0,0].set_title('Ending "Regulatory Drought"')
 b = sns.scatterplot(ax = axs[0,1], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
-plot_comparison('v2', 0, 1)
+
 axs[0,1].set_title('Improved water management')
 c = sns.scatterplot(ax = axs[1,0], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
-plot_comparison('v3', 1, 0)
+
 axs[1,0].set_title('Increased state oversight')
 #axs[1,0].set_title('test')
 d = sns.scatterplot(ax = axs[1,1], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
-plot_comparison('v4', 1, 1)
+
 axs[1,1].set_title('Change Nature of Agriculture')
 
+for i in range(4):
+  for j in range(N-2):
+    axs[i%2, i//2].annotate('', xy = (sensitivities[i+1,j], influences[i+1,j]), xytext =(sensitivities[0,j], influences[0,j]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[j]], arrowstyle='-|>', mutation_scale=15))
 
 
 axs[1,0].set_xlabel('Sensitivity', fontsize = 18)

@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jul 25 18:53:41 2023
+import numpy as np
+import pandas as pd
+from pathlib import Path
 
-@author: nmoll
-"""
 
 def parameters_comparison(parameter,scenario1,scenario2):
   path = Path.cwd().joinpath('parameter_files',scenario1, '%s.xlsx'%(parameter))
-  param_df_1 = pd.read_csv(path)
+  param_df_1 = pd.read_excel(path)
   param_1 = param_df_1.fillna(0).values[:,1:] # array of weights for sampling
   param_1 = np.array(param_1, dtype=[('O', float)]).astype(float)
   path = Path.cwd().joinpath('parameter_files',scenario2, '%s.xlsx'%(parameter))
-  param_df_2 = pd.read_csv(path)
+  param_df_2 = pd.read_excel(path)
   param_2 = param_df_2.fillna(0).values[:,1:] # array of weights for sampling
   param_2 = np.array(param_2, dtype=[('O', float)]).astype(float)
   if np.shape(param_1)==np.shape(param_2):
@@ -25,7 +23,7 @@ def parameters_comparison(parameter,scenario1,scenario2):
     
   return diff, param_1, param_2
   
-
+diff, sigma_weights, sigma_weights_v1 = parameters_comparison('sigmas','base','v1')
 # path = Path.cwd().joinpath('parameter_files', 'base', 'sigmas.csv')
 # sigmas_df = pd.read_csv(path)
 # sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
