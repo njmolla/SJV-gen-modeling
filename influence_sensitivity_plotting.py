@@ -66,22 +66,6 @@ impacts_base_mean = np.mean(partial_impacts_base, axis=0)
 influences_avg_base = np.sum(impacts_base_mean,axis=1)[3:3+N-2]
 sensitivities_avg_base = np.sum(impacts_base_mean,axis=0)[3:3+N-2]
 
-# filepath_sensitivity = Path('data\influences_sensitivities\\base\sensitivities_base')
-# filepath_influence = Path('data\influences_sensitivities\\base\influences_base')
-
-
-# # import data from baseline, which will be plotted on all plots
-# with open(filepath_sensitivity, 'rb') as f:
-#   sensitivities_list_base = pickle.load(f)
-
-# with open(filepath_influence, 'rb') as f:
-#   influences_list_base = pickle.load(f)
-  
-# influences_avg_base = np.mean(influences_list_base, axis=0)[3:3+N]
-# sensitivities_avg_base = np.mean(sensitivities_list_base, axis=0)[3:3+N]
-  
-#influences_avg_base = np.log(np.mean(influences_list_base, axis=0)[3:3+N])
-#sensitivities_avg_base = np.log(np.mean(sensitivities_list_base, axis=0)[3:3+N])
 
 # check for non-zero imaginary part of sensitivity or influence values
 if np.any(abs(sensitivities_avg_base-np.real(sensitivities_avg_base)) > 1e-10):
@@ -104,10 +88,10 @@ influences[3], sensitivities[3] = plot_comparison('v3', 1, 0)
 influences[4], sensitivities[4] = plot_comparison('v4', 1, 1)
 
 # mins and maxes for setting plot bounds
-sensitivity_min = np.min(sensitivities)
+sensitivity_min = np.min(sensitivities)-5
 influences_min = np.min(influences)-5
 
-sensitivity_max = np.max(sensitivities)
+sensitivity_max = np.max(sensitivities)+5
 influences_max = np.max(influences)+5
 
 sns.set_style("darkgrid")

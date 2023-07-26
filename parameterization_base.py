@@ -63,8 +63,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   betas = np.zeros([1,tot]) # gain from collaboration/support from others
   beta_bars = np.zeros([1,tot]) # gain from "natural" gain
 
-  path = Path.cwd().joinpath('parameter_files', 'base', 'sigmas.csv')
-  sigmas_df = pd.read_csv(path)
+  path = Path.cwd().joinpath('parameter_files', 'base', 'sigmas.xlsx')
+  sigmas_df = pd.read_excel(path)
   sigma_weights = sigmas_df.fillna(0).values[:,1:] # array of weights for sampling
   sigma_weights = np.array(sigma_weights, dtype=[('O', float)]).astype(float)
   total = np.sum(sigma_weights[:,:N],axis = 0)
