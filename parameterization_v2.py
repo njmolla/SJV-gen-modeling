@@ -19,17 +19,15 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = np.random.uniform(0.57,0.7)# sw
-  phis[1] = np.random.uniform(0.11,0.13,(1,)) #gw
-  #phis[1] = np.random.uniform(0.06,0.08,(1,)) #gw
+  phis[0] = np.random.uniform(0.62,0.68)# sw
+  phis[1] = np.random.uniform(0.15,0.19,(1,)) #gw
 
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.73,0.89,(1,)) #sw
-  psis[1] = np.random.uniform(0.74,0.9,(1,)) #gw
+  psis[0] = np.random.uniform(0.78,0.84,(1,)) #sw
+  psis[1] = np.random.uniform(0.77,0.83,(1,)) #gw
   psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
   psi_bars[1] = 1-psis[1]
-  #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
   eq_R_ratio = (psi_bars[1]/psi_bars[0])*(phis[1]/phis[0])
 
   # 1: DACs
@@ -54,7 +52,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   weights = np.array([0.07,0.4,0.07,0.4,0.03,0.03])
   psi_tildes[2,1:N] = weights/(np.sum(weights)) # gw discharge split
   
-  de2_de1 = -0.66*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
+  de2_de1 = -0.9*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
   de2_de1 = np.nan_to_num(de2_de1)
   
   alphas = np.zeros((1,tot))
@@ -101,7 +99,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sigmas = np.zeros((N+K,tot)) # sigma_k,n is kxn $
   sigma_hats = np.zeros((M,tot))
 
-  for i in range(tot-1): # loop through to fill in each column
+  for i in range(tot): # loop through to fill in each column
     sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
     sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])
     
@@ -121,7 +119,7 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas_df = pd.read_excel(path)
   lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
-  for i in range(tot-1): # loop through to fill in each (each column sums to 1)
+  for i in range(tot): # loop through to fill in each (each column sums to 1)
     lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
     lambda_hats[:,i][lambdas_weights[-M:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[-M:,:][:,i][lambdas_weights[-M:,:][:,i]>0])
  
@@ -208,11 +206,12 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   ds_dr[0] = -1
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
-  de_dr[1,0] = np.random.uniform(1,2)
-  de_dr[1,1] = np.random.uniform(0.5,1.5)
-  de_dr[1,2] = np.random.uniform(0,0.5)
-  de_dr[1,3] = np.random.uniform(1,2)
-  de_dr[1,4] = np.random.uniform(0,0.5)
+  de_dr[1,0] = np.random.uniform(1.75,2) # DACs
+  de_dr[1,1] = np.random.uniform(1.25,1.75) # small growers
+  de_dr[1,2] = np.random.uniform(1.,1.5) # investor growers
+  de_dr[1,3] = np.random.uniform(1.75,2)  # white area small growers
+  de_dr[1,4] = np.random.uniform(1.25,1.75) # white area investor growers
+  de_dr[1,5:] = np.random.uniform(0.5,1)
   de_dr[2,0] = np.random.uniform(1,2)*-1
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $

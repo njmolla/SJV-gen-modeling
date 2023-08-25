@@ -20,15 +20,15 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = np.random.uniform(0.66,0.68,(1,))  # sw
-  phis[1] = np.random.uniform(0.1,0.12,(1,)) #gw
+  phis[0] = np.random.uniform(0.72,0.76,(1,))  # sw
+  phis[1] = np.random.uniform(0.12,0.16,(1,)) #gw
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.93,0.98,(1,)) #sw
-  psis[1] = np.random.uniform(0.8,0.9,(1,)) #gw
+  psis[0] = np.random.uniform(0.96,1,(1,)) #sw
+  psis[1] = np.random.uniform(0.96,0.99,(1,)) #gw
   psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
   psi_bars[1] = 1-psis[1]
-  #eq_R_ratio = np.random.uniform(0.005,0.007,(1,))
+ 
   eq_R_ratio = (psi_bars[1]/psi_bars[0])*(phis[1]/phis[0])
 
   # 1: DACs
@@ -48,12 +48,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   # TO DO: fix sampling of parameters that should sum to 1
   psi_tildes = np.zeros((3,N)) # 
   psi_tildes[0,np.nonzero(sw_users)] = np.array([0.15,0.35,0.15,0.35]) # sw split
-  weights = np.array([1,5,25,10,60,1,1]) # gw split
+  weights = np.array([1,7.5,40,7.5,40,1,1]) # gw split
   psi_tildes[1] = weights/(np.sum(weights)) 
   weights = np.array([0.07,0.4,0.07,0.4,0.03,0.03])
   psi_tildes[2,1:N] = weights/(np.sum(weights)) # gw discharge split
   
-  de2_de1 = -0.66*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
+  de2_de1 = -0.9*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
   de2_de1 = np.nan_to_num(de2_de1)
   
   alphas = np.zeros((1,tot))
@@ -92,16 +92,15 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   beta_bars[0,:N] = beta_params[:,2,0]
 
   sigma_tildes = np.zeros([3,N]) # gain based on each resource state variable
-  #sigma_tildes[1,~sw_users] = 1 # white area growers rely entirely on groundwater
   sigma_tildes[1,0] = np.random.uniform(0.4,0.6) # salience of gw availability to communities
   sigma_tildes[2,0] = 1 - sigma_tildes[1,0] # salience of gw quality to communities
-  sigma_tildes[0,1:] = -de2_de1[1:]/(1-de2_de1[1:]) #np.random.uniform(0.1,0.5,(2,)) # reliance of growers w/ sw access on sw
+  sigma_tildes[0,1:] = -de2_de1[1:]/(1-de2_de1[1:]) # reliance of growers w/ sw access on sw
   sigma_tildes[1,1:] = 1-sigma_tildes[0,1:] # reliance of growers w/ sw access on gw 
 
   sigmas = np.zeros((N+K,tot)) # sigma_k,n is kxn $
   sigma_hats = np.zeros((M,tot))
 
-  for i in range(tot-1): # loop through to fill in each column
+  for i in range(tot): # loop through to fill in each column
     sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
     sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])
     
@@ -205,17 +204,18 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   # 5: investor white area growers 
   
   sw_users = np.array([False]*(N+K))
-  sw_users[1:3] = True
+  sw_users[1:5] = True
   ds_dr = np.zeros((2))
   ds_dr[0] = -1
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
-  de_dr[1,0] = np.random.uniform(1,2)
-  de_dr[1,1] = np.random.uniform(0.5,1.5)
-  de_dr[1,2] = np.random.uniform(0,0.5)
-  de_dr[1,3] = np.random.uniform(1,2)
-  de_dr[1,4] = np.random.uniform(0,0.5)
-  de_dr[2,0] = np.random.uniform(1,2)*-1
+  de_dr[1,0] = np.random.uniform(1.75,2) # DACs
+  de_dr[1,1] = np.random.uniform(1,1.5) # small growers
+  de_dr[1,2] = np.random.uniform(0.75,1.25) # investor growers
+  de_dr[1,3] = np.random.uniform(1,1.5) # white area small growers
+  de_dr[1,4] = np.random.uniform(0.75,1.25) # white area investor growers
+  de_dr[1,5:] = np.random.uniform(0,0.5)
+  de_dr[2,0] = np.random.uniform(1.75,2.25)*-1
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $
   de_dE = np.zeros((3,N+K,N))

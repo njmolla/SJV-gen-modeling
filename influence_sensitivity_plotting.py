@@ -122,7 +122,7 @@ axs[1,1].set_title('Change Nature of Agriculture')
 
 for i in range(4):
   for j in range(N-2):
-    axs[i%2, i//2].annotate('', xy = (sensitivities[i+1,j], influences[i+1,j]), xytext =(sensitivities[0,j], influences[0,j]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[j]], arrowstyle='-|>', mutation_scale=15))
+    axs[i//2, i%2].annotate('', xy = (sensitivities[i+1,j], influences[i+1,j]), xytext =(sensitivities[0,j], influences[0,j]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[j]], arrowstyle='-|>', mutation_scale=15))
 
 
 axs[1,0].set_xlabel('Sensitivity', fontsize = 18)
@@ -136,7 +136,7 @@ axs[1,0].legend([],[], frameon=False)
 axs[1,1].legend([],[], frameon=False)
 handles, labels = axs[0,1].get_legend_handles_labels()
 axs[0,1].legend(handles[:N], labels[:N],bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-plt.savefig('comparisons.svg', bbox_inches='tight')
+plt.savefig('comparisons_alt.svg', bbox_inches='tight')
 
 #####################################################################################
 # Plot partial sensitivities and influences
@@ -194,40 +194,44 @@ def partial_impacts_table(parameterization):
   df_summary.loc['non-governmental organizations','government entities'] = np.real(np.sum(impacts_mean[N+3:N+3+K,N+3+K:]))
   df_summary.loc['government entities','non-governmental organizations'] = np.real(np.sum(impacts_mean[N+3+K:,N+3:N+3+K]))
   df_summary.loc['government entities','government entities'] = np.real(np.sum(impacts_mean[N+3+K:,N+3+K:]))
+  
+  return df_summary
 
+# parameterization = 'v4'
+# base_df = partial_impacts_table('base')
+# alt_df = partial_impacts_table(parameterization)
+# comparison_df = alt_df - base_df
 
-  colors = plt.cm.BuPu(df_summary.to_numpy(dtype = float))
+# colors = plt.cm.BuPu(comparison_df.to_numpy(dtype = float))
 
-  #fig = plt.figure(figsize=(25, 10))
-  fig = plt.figure()
-  ax = fig.add_subplot(111, xticks=[], yticks=[])
+# #fig = plt.figure(figsize=(25, 10))
+# fig = plt.figure()
+# ax = fig.add_subplot(111, xticks=[], yticks=[])
 
-  #create dummy colormap (not visible) for the colorbar
-  img = plt.imshow(df_summary.to_numpy(dtype = float), cmap="BuPu")
-  img.set_visible(False)
-  plt.colorbar(orientation="horizontal", pad=0.1)
+# #create dummy colormap (not visible) for the colorbar
+# img = plt.imshow(comparison_df.to_numpy(dtype = float), cmap="BuPu")
+# img.set_visible(False)
+# colorbar = plt.colorbar(orientation="horizontal", pad=0.1)
+# colorbar.ax.set_ylim(0, 900)
+# import textwrap
+# rows = []
+# cols = []
 
-  import textwrap
-  rows = []
-  cols = []
+# for i in range(len(comparison_df.index)):
+#   rows.append(textwrap.fill(comparison_df.index[i],25))
+#   cols.append(textwrap.fill(comparison_df.columns[i],25))
 
-  for i in range(len(df_summary.index)):
-    rows.append(textwrap.fill(df_summary.index[i],25))
-    cols.append(textwrap.fill(df_summary.columns[i],25))
+  
+# table=ax.table(rowLabels=rows, colLabels=cols, 
+#                     loc='center',cellLoc='left', cellColours=colors)
 
-    
-  table=ax.table(rowLabels=rows, colLabels=cols, 
-                      loc='center',cellLoc='left', cellColours=colors)
+# table.auto_set_font_size(False)
+# table.set_fontsize(10)
+# ax.axis('off')
 
-  table.auto_set_font_size(False)
-  table.set_fontsize(10)
-  ax.axis('off')
+# table.auto_set_column_width((0,1,2,3,4,5,6,7,8,9))
 
-  table.auto_set_column_width((2,3,4,5,6,7,8,9))
+# plt.tight_layout()
+# plt.show()
+# plt.savefig('comparison_impacts_table_%s.svg'%(parameterization), bbox_inches='tight')
 
-  plt.tight_layout()
-  plt.show()
-  plt.savefig('partial_impacts_table_%s.svg'%(parameterization), bbox_inches='tight')
-
-#partial_impacts_table('base')
-#partial_impacts_table('v4')

@@ -22,12 +22,12 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
     All of the scale parameters and strategy parameters
   '''
   phis = np.zeros(2) 
-  phis[0] = np.random.uniform(0.28,0.34) # sw
-  phis[1] = np.random.uniform(0.08,0.097,(1,)) #gw
-
+  phis[0] = np.random.uniform(0.62,0.68) # sw
+  phis[1] = np.random.uniform(0.07,0.11,(1,)) #gw
+  
   psis = np.zeros(2)
-  psis[0] = np.random.uniform(0.54,0.66,(1,)) #sw
-  psis[1] = np.random.uniform(0.74,0.9,(1,)) #gw
+  psis[0] = np.random.uniform(0.78,0.84,(1,)) #sw
+  psis[1] = np.random.uniform(0.77,0.83,(1,)) #gw
   psi_bars = np.zeros(2)
   psi_bars[0] = 1-psis[0]# proportion of surface water transferred to groundwater
   psi_bars[1] = 1-psis[1]
@@ -48,21 +48,23 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sw_users[1:3] = True
   small_growers = np.array([False]*(N))
   small_growers[[1,3]] = True
-  # TO DO: fix sampling of parameters that should sum to 1
+
   psi_tildes = np.zeros((3,N)) # 
+  #psi_tildes[0,0:3] = np.array([1/3,1/3,1/3])
   psi_tildes[0,1:3] = np.array([0.5,0.5]) # sw split
   weights = np.array([10,15,15,15,15,15,15]) # gw split
   psi_tildes[1] = weights/(np.sum(weights)) 
   weights = np.array([2,2,2,2,1,1])
   psi_tildes[2,1:N] = weights/(np.sum(weights)) # gw discharge split
   
-  de2_de1 = -0.66*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
+  de2_de1 = -0.9*((phis[0]*psis[0]*psi_tildes[0,:])/(phis[1]*psi_tildes[1,:]))*eq_R_ratio
   de2_de1 = np.nan_to_num(de2_de1)
   
   alphas = np.zeros((1,tot))
-  alphas[0,0:2] = np.random.uniform(0.3,0.6,(2,))
-  alphas[0,3] = np.random.uniform(0.3,0.6)
-  alphas[0,[2,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
+  alphas[0,1:N] = np.random.uniform(0.05,0.1,(6,))
+  alphas[0,0] = np.random.uniform(0.3,0.6,(1,))
+  # alphas[0,3] = np.random.uniform(0.3,0.6)
+  # alphas[0,[2,4,5,6]] = np.random.uniform(0.05,0.1,(4,))
   alphas[0,N:] = np.random.uniform(0.05,0.1,(K+M,))
   beta_tildes = np.zeros([1,tot]) # gain based on resource access in general
   beta_hats = np.zeros([1,tot]) # gain from govt support
@@ -149,7 +151,10 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Financial Assistance (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[N+EJ_groups[0],[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2,(1,2))
   G[DACs_idx,[1,2],np.nonzero(M_list=='Local Water Boards')[0],DACs_idx] = np.random.uniform(1,2)
-  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1) 
+  G[DACs_idx,[1,2],np.nonzero(M_list=='County Board of Supervisors')[0],DACs_idx] = np.random.uniform(0.5,1)
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='Drinking Water Division (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2)
+  #G[DACs_idx,[1,2],np.nonzero(M_list=='Groundwater Management (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2)
+  #G[DACs_idx,[2],np.nonzero(M_list=='Division of Water Quality (SWRCB)')[0],DACs_idx] = np.random.uniform(1,2)
   # UCCE helps growers get grants from NRCS grants
   G[N+np.nonzero(K_list=='UC Extension/research community')[0],2,np.nonzero(M_list=='NRCS')[0],growers] = np.random.uniform(0.5,1.5, (1,1,1,4))
   G = np.divide(G,np.sum(G,axis=0))
@@ -211,12 +216,16 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   ds_dr[1] = 0 
   de_dr = np.zeros((3,N+K))
   de_dr[0,sw_users] = 1
-  de_dr[1,0] = np.random.uniform(1,2)
-  de_dr[1,1] = np.random.uniform(0.5,1.5)
-  de_dr[1,2] = np.random.uniform(0,0.5)
-  de_dr[1,3] = np.random.uniform(1,2)
-  de_dr[1,4] = np.random.uniform(0,0.5)
-  de_dr[2,0] = np.random.uniform(1,2)*-1
+  de_dr[0,sw_users] = 1  
+  de_dr[1,0] = np.random.uniform(0,0.5) # DACs
+  de_dr[1,1] = np.random.uniform(0,0.5) # small growers
+  #de_dr[1,1] = np.random.uniform(0.25,0.75) # small growers
+  de_dr[1,2] = np.random.uniform(0,0.5) # investor growers
+  de_dr[1,3] = np.random.uniform(0,0.5)  # white area small growers
+  #de_dr[1,3] = np.random.uniform(0.5,1)  # white area small growers
+  de_dr[1,4] = np.random.uniform(0,0.5) # white area investor growers
+  de_dr[1,5:] = np.random.uniform(0,1)
+  de_dr[2,0] = np.random.uniform(0,0.5)*-1
   dt_dr = 0.5 
   de_dg = np.zeros((3,M,N))  ###### $
   de_dE = np.zeros((3,N+K,N))
@@ -274,7 +283,7 @@ def set_fixed_exp_params(N, M, K,N_list,M_list,K_list,tot,R):
   dg_dG = np.broadcast_to(dg_dG, (3,N+K,M,N))
   
   dh_dH = dg_dG[0,:,:,0]/2 #np.zeros((N+K,M))
-  dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.05,(1,M))
+  dh_dH[np.nonzero(N_list=='small growers (white area)')] = np.random.uniform(0,0.1,(1,M))
   dh_dH[np.nonzero(N_list=='investor growers (white area)')] = np.random.uniform(0,0.1,(1,M))
   
   

@@ -5,25 +5,64 @@ from pathlib import Path
 
 def parameters_comparison(parameter,scenario1,scenario2):
   path = Path.cwd().joinpath('parameter_files',scenario1, '%s.xlsx'%(parameter))
-  param_df_1 = pd.read_excel(path)
-  param_1 = param_df_1.fillna(0).values[:,1:] # array of weights for sampling
-  param_1 = np.array(param_1, dtype=[('O', float)]).astype(float)
+  df1 = pd.read_excel(path, index_col = 0)
+  df1 = df1.fillna(0) # array of weights for sampling
+  #df1 = df1.fillna(0).values[:,1:] # array of weights for sampling
+  #param_1 = np.array(param_1, dtype=[('O', float)]).astype(float)
   path = Path.cwd().joinpath('parameter_files',scenario2, '%s.xlsx'%(parameter))
-  param_df_2 = pd.read_excel(path)
-  param_2 = param_df_2.fillna(0).values[:,1:] # array of weights for sampling
-  param_2 = np.array(param_2, dtype=[('O', float)]).astype(float)
-  if np.shape(param_1)==np.shape(param_2):
-    diff = param_2-param_1
-    if np.sum(diff)<1e-5:
-      print('no difference')
-  else:
-    diff = None
-    print('parameters are different shapes')
+  df2 = pd.read_excel(path, index_col = 0)
+  df2 = df2.fillna(0) # array of weights for sampling
+  #df2 = df2.fillna(0).values[:,1:] # array of weights for sampling
+  #param_2 = np.array(param_2, dtype=[('O', float)]).astype(float)
+  
+    # Find the dataframe with more columns
+  if len(df1.columns) < len(df2.columns):
+      missing_cols = set(df2.columns) - set(df1.columns)
+      for col in missing_cols:
+          df1[col] = 0  # add missing column filled with 0s
+  elif len(df2.columns) < len(df1.columns):
+      missing_cols = set(df1.columns) - set(df2.columns)
+      for col in missing_cols:
+          df2[col] = 0  # add missing column filled with 0s
+
+  # Ensure both dataframes have the same column order
+  df1 = df1.reindex(columns=df2.columns)
+
+  # Reindexing rows to match all unique row labels from both dataframes
+  all_indices = df1.index.union(df2.index)
+  df1 = df1.reindex(all_indices, fill_value=0)
+  df2 = df2.reindex(all_indices, fill_value=0)
+
+  # Compare the two dataframes
+  comparison = df1.compare(df2)
+
+  # Return the comparison result dataframe, and the updated dataframes
+  return comparison, df1, df2
+
+comparison, df1, df2 = parameters_comparison('de_dg_sw_upper','base','v4')
+  
+  # if np.shape(param_1)==np.shape(param_2):
+  #   diff = df1.compare(df2)
+  #   #diff = param_2-param_1
+  #   # if np.sum(diff)<1e-5:
+  #   #   print('no difference')
+  # else:
+    
+  #   if parameter == 'sigmas':
+  #     dim = (36,36)
+  #     if np.shape(param_1) != dim:
+  #       param_1()
       
-  return diff, param_1, param_2
+  #   if np.shape(param_1)[0]<np.shape(param_2)[0]:
+  #     param_1_padded = np.zeros(np.shape(param_2))
+      
+  #   diff = None
+  #   print('parameters are different shapes')
+      
+  # return diff, param_1, param_2
   
 #diff, sigma_weights, sigma_weights_v1 = parameters_comparison('sigmas','base','v1')
-diff, de_dg, de_dg_v1 = parameters_comparison('de_dg_sw_lower','base','v1')
+#diff, de_dg, de_dg_v1 = parameters_comparison('de_dg_sw_lower','base','v1')
 
 # path = Path.cwd().joinpath('parameter_files', 'base', 'sigmas.csv')
 # sigmas_df = pd.read_csv(path)
