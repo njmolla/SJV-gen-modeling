@@ -44,8 +44,8 @@ def run_system(user = None, parameterization = 'base'):
     from parameterization_v3 import set_scale_params, set_fixed_exp_params  
   elif parameterization == 'v4':
     from parameterization_v4 import set_scale_params, set_fixed_exp_params
-  elif parameterization == 'v5': # this one should be removed later ################################
-    from parameterization_v5 import set_scale_params, set_fixed_exp_params    
+  elif parameterization == 'test': # this one should be removed later ################################
+    from parameterization_test import set_scale_params, set_fixed_exp_params    
   else:
     print('invalid parameterization. options are base, v1, v2, v3, and v4')
     

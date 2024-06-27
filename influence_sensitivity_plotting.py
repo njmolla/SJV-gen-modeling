@@ -16,14 +16,10 @@ K = len(K_list)
 M_list=entities['M'].values[:,0]
 M = len(M_list)
 
-def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points = N):
+def compute_influence_sensitivity(parameterization):
   filepath = Path('data\influences_sensitivities\%s\partial_impacts_%s_alt'
                                 %(parameterization, parameterization))
 
-  # filepath_sensitivity = Path('data\influences_sensitivities\%s\sensitivities_%s'
-  #                               %(parameterization, parameterization))
-  # filepath_influence = Path('data\influences_sensitivities\%s\influences_%s'
-  #                             %(parameterization, parameterization))
 
   with open(filepath, 'rb') as f:
     impacts_list = pickle.load(f)
@@ -32,10 +28,6 @@ def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points 
   influences_avg = np.sum(impacts_mean,axis=1)[3:3+N-2]
   sensitivities_avg = np.sum(impacts_mean,axis=0)[3:3+N-2]
  
-  # with open(filepath_sensitivity, 'rb') as f:
-  #   sensitivities_list = pickle.load(f)  
-  # with open(filepath_influence, 'rb') as f:
-  #   influences_list = pickle.load(f)
   
   # Just get influences and sensitivities for resource users
 
@@ -58,34 +50,37 @@ def plot_comparison(parameterization, pos_x, pos_y, labels = N_list, num_points 
   
 # Use to compare all four scenarios to the base scenario
 
-with open(Path('data\influences_sensitivities\\base\partial_impacts_base_alt'), 'rb') as f:
-  partial_impacts_base = pickle.load(f)
+# with open(Path('data\influences_sensitivities\\base\partial_impacts_base_alt'), 'rb') as f:
+#   partial_impacts_base = pickle.load(f)
 
 
-impacts_base_mean = np.mean(partial_impacts_base, axis=0)
-influences_avg_base = np.sum(impacts_base_mean,axis=1)[3:3+N-2]
-sensitivities_avg_base = np.sum(impacts_base_mean,axis=0)[3:3+N-2]
+# impacts_base_mean = np.mean(partial_impacts_base, axis=0)
+# influences_avg_base = np.sum(impacts_base_mean,axis=1)[3:3+N-2]
+# sensitivities_avg_base = np.sum(impacts_base_mean,axis=0)[3:3+N-2]
 
 
-# check for non-zero imaginary part of sensitivity or influence values
-if np.any(abs(sensitivities_avg_base-np.real(sensitivities_avg_base)) > 1e-10):
-  print('complex sensitivity values!')
-else:
-  sensitivities_avg_base = np.real(sensitivities_avg_base)
+# # check for non-zero imaginary part of sensitivity or influence values
+# if np.any(abs(sensitivities_avg_base-np.real(sensitivities_avg_base)) > 1e-10):
+#   print('complex sensitivity values!')
+# else:
+#   sensitivities_avg_base = np.real(sensitivities_avg_base)
   
-if np.any(abs(influences_avg_base-np.real(influences_avg_base)) > 1e-10):
-  print('complex influence values!')
-else:
-  influences_avg_base = np.real(influences_avg_base)
+# if np.any(abs(influences_avg_base-np.real(influences_avg_base)) > 1e-10):
+#   print('complex influence values!')
+# else:
+#   influences_avg_base = np.real(influences_avg_base)
 
-influences = np.zeros((5,5))
-sensitivities = np.zeros((5,5))
 
-influences[0], sensitivities[0] = influences_avg_base, sensitivities_avg_base
-influences[1], sensitivities[1] = plot_comparison('v1', 0, 0)
-influences[2], sensitivities[2] = plot_comparison('v2', 0, 1)
-influences[3], sensitivities[3] = plot_comparison('v3', 1, 0)
-influences[4], sensitivities[4] = plot_comparison('v4', 1, 1)
+
+influences = np.zeros((6,5))
+sensitivities = np.zeros((6,5))
+
+influences[0], sensitivities[0] = compute_influence_sensitivity('base')
+influences[1], sensitivities[1] = compute_influence_sensitivity('v1')
+influences[2], sensitivities[2] = compute_influence_sensitivity('v2')
+influences[3], sensitivities[3] = compute_influence_sensitivity('v3')
+influences[4], sensitivities[4] = compute_influence_sensitivity('v4')
+influences[5], sensitivities[5] = compute_influence_sensitivity('test')
 
 # mins and maxes for setting plot bounds
 sensitivity_min = np.min(sensitivities)-5
@@ -106,18 +101,16 @@ axs[1,1].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
 axs[1,1].set_ylim(ymin=influences_min, ymax=influences_max)
 
 
-a = sns.scatterplot(ax = axs[0,0], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
-
+a = sns.scatterplot(ax = axs[0,0], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
 axs[0,0].set_title('Ending "Regulatory Drought"')
-b = sns.scatterplot(ax = axs[0,1], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
 
+b = sns.scatterplot(ax = axs[0,1], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
 axs[0,1].set_title('Improved water management')
-c = sns.scatterplot(ax = axs[1,0], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
 
+c = sns.scatterplot(ax = axs[1,0], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
 axs[1,0].set_title('Increased state oversight')
-#axs[1,0].set_title('test')
-d = sns.scatterplot(ax = axs[1,1], x = sensitivities_avg_base, y = influences_avg_base, hue = N_list[:-2], marker = 'o', s=50)
 
+d = sns.scatterplot(ax = axs[1,1], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
 axs[1,1].set_title('Change Nature of Agriculture')
 
 for i in range(4):
@@ -136,8 +129,36 @@ axs[1,0].legend([],[], frameon=False)
 axs[1,1].legend([],[], frameon=False)
 handles, labels = axs[0,1].get_legend_handles_labels()
 axs[0,1].legend(handles[:N], labels[:N],bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-plt.savefig('comparisons_alt.svg', bbox_inches='tight')
+plt.savefig('comparisons.svg', bbox_inches='tight')
 
+##################################################################################
+sns.set_style("darkgrid")
+fig2, axs2 = plt.subplots(nrows=1, ncols=2, sharex='all', sharey='all')
+axs2[0].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs2[0].set_ylim(ymin=influences_min, ymax=influences_max)
+axs2[1].set_xlim(xmin=sensitivity_min, xmax=sensitivity_max)
+axs2[1].set_ylim(ymin=influences_min, ymax=influences_max)
+
+axs2[0].set_title('Test (fully identical growers)')
+a = sns.scatterplot(ax = axs2[0], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
+for j in range(N-2):
+  axs2[0].annotate('', xy = (sensitivities[5,j], influences[5,j]), xytext =(sensitivities[0,j], influences[0,j]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[j]], arrowstyle='-|>', mutation_scale=15))
+
+axs2[1].set_title('Change Nature of Agriculture')
+d = sns.scatterplot(ax = axs2[1], x = sensitivities[0], y = influences[0], hue = N_list[:-2], marker = 'o', s=50)
+for j in range(N-2):
+  axs2[1].annotate('', xy = (sensitivities[4,j], influences[4,j]), xytext =(sensitivities[0,j], influences[0,j]), arrowprops=dict(color = mcolors.TABLEAU_COLORS[list(mcolors.TABLEAU_COLORS)[j]], arrowstyle='-|>', mutation_scale=15))
+
+
+axs2[0].set_xlabel('Sensitivity', fontsize = 18)
+axs2[1].set_xlabel('Sensitivity', fontsize = 18)
+axs2[0].set_ylabel('Influence', fontsize = 18)
+
+
+#plt.ylabel('Influence', fontsize = 18)
+handles, labels = axs2[1].get_legend_handles_labels()
+axs2[1].legend(handles[:N], labels[:N],bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+plt.savefig('test_comparison.svg', bbox_inches='tight')
 #####################################################################################
 # Plot partial sensitivities and influences
 

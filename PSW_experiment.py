@@ -6,16 +6,16 @@ import pandas as pd
 from pathlib import Path
 from scipy.stats import binomtest
 import matplotlib.pyplot as plt
+import itertools
 
 num_samples = 1000
 
-parameterizations = ['base','v1','v2','v3','v4']
+parameterizations = ['base', 'v1', 'v2', 'v3', 'v4']
+parameterization_labels = ['Base','Ending "Regulatory Drought"', 'Improved water management', 'Increased state oversight', 'Change Nature of Agriculture']
 
-data = pd.DataFrame(index=parameterizations, columns = ['proportion stable','CI low', 'CI high'])
+data = pd.DataFrame(index=parameterization_labels, columns = ['proportion stable','CI low', 'CI high'])
 
-for parameterization in parameterizations:
-    print(parameterization)
-
+for (parameterization, parameterization_label) in zip(parameterizations, parameterization_labels):
     seed = 0
     stable = 0
 
@@ -29,15 +29,19 @@ for parameterization in parameterizations:
       if stability_final == True:
           stable += 1
     # save proportion stable in dataframe
-    data.loc[parameterization, 'proportion stable'] = stable/num_samples
+    data.loc[parameterization_label, 'proportion stable'] = stable/num_samples
     #calculate confidence intervals
     result = binomtest(stable, num_samples).proportion_ci()
-    data.loc[parameterization, ['CI low', 'CI high']] = [result[0], result[1]]
+    data.loc[parameterization_label, ['CI low', 'CI high']] = [result[0], result[1]]
 
+with open('data\stabilities', 'wb') as f:
+  pickle.dump(data, f)
 
 CI_low = data['proportion stable'].values - data['CI low'].values
 CI_high = data['CI high'].values - data['proportion stable'].values
 ax = data.plot.bar(y='proportion stable', yerr = np.stack([CI_low, CI_high]))
+ax.set_ylabel('Proportion Stable')
+plt.tight_layout()
 ax.figure.savefig('Proportion_Stable.svg')
 
 # p1 = 203/500

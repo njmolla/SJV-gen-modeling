@@ -74,13 +74,13 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   from_ngo = np.sum(sigma_weights[:N+K,:N],axis = 0)
   from_gov = np.sum(sigma_weights[-M:,:N],axis = 0)
   # resource users have gain from extraction, collaboration, and recruitment/self-growth, respectively
-  betas_1 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_2 = np.random.dirichlet([0.2,0.7,0.1],1).transpose()
-  betas_3 = np.random.dirichlet([0.2,0.2,0.6],1).transpose()
-  betas_4 = np.random.dirichlet([0.3,0.4,0.3],1).transpose()
-  betas_5 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_6 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
-  betas_7 = np.random.dirichlet([0.3,0.2,0.5],1).transpose()
+  betas_1 = np.random.dirichlet([30,40,30],1).transpose()
+  betas_2 = np.random.dirichlet([30,20,50],1).transpose()
+  betas_3 = np.random.dirichlet([30,20,50],1).transpose()
+  betas_4 = np.random.dirichlet([30,20,50],1).transpose()
+  betas_5 = np.random.dirichlet([30,20,50],1).transpose()
+  betas_6 = np.random.dirichlet([30,20,50],1).transpose()
+  betas_7 = np.random.dirichlet([30,20,50],1).transpose()
   
   beta_params = np.stack([betas_1, betas_2, betas_3, betas_4, betas_5, betas_6, betas_7])
   beta_tildes[0,:N] = beta_params[:,0,0]
@@ -100,8 +100,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   sigma_hats = np.zeros((M,tot))
 
   for i in range(tot): # loop through to fill in each column
-    sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet(sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])
-    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet(sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])
+    sigmas[:,i][sigma_weights[:N+K,:][:,i]>0] = np.random.dirichlet((sigma_weights[:N+K,:][:,i][sigma_weights[:N+K,:][:,i]>0])*10) # add multiplier by 10 to reduce variance
+    sigma_hats[:,i][sigma_weights[-M:,:][:,i]>0] = np.random.dirichlet((sigma_weights[-M:,:][:,i][sigma_weights[-M:,:][:,i]>0])*10)
     
   # non-govt and govt orgs actors have natural gain and gain from collaboration from other actors (betas) and govt (beta_hats)
   total = np.sum(sigma_weights[:,N:N+K+M],axis = 0)
@@ -120,8 +120,8 @@ def set_scale_params(N,M,K,N_list,M_list,K_list,tot,R):
   lambdas_weights = lambdas_df.fillna(0).values[:,1:] # array of weights for sampling
   lambdas_weights = np.array(lambdas_weights, dtype=[('O', float)]).astype(float)
   for i in range(tot): # loop through to fill in each (each column sums to 1)
-    lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet(lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])
-    lambda_hats[:,i][lambdas_weights[-M:,:][:,i]>0] = np.random.dirichlet(lambdas_weights[-M:,:][:,i][lambdas_weights[-M:,:][:,i]>0])
+    lambdas[:,i][lambdas_weights[:N+K,:][:,i]>0] = np.random.dirichlet((lambdas_weights[:N+K,:][:,i][lambdas_weights[:N+K,:][:,i]>0])*10)
+    lambda_hats[:,i][lambdas_weights[-M:,:][:,i]>0] = np.random.dirichlet((lambdas_weights[-M:,:][:,i][lambdas_weights[-M:,:][:,i]>0])*10)
  
   # losses
   etas = np.zeros((1,tot))
